@@ -156,6 +156,8 @@ MIDDLEWARE_CLASSES = (
     'bluebottle.auth.middleware.SlidingJwtTokenMiddleware',
     'django.middleware.cache.FetchFromCacheMiddleware',
     'bluebottle.auth.middleware.LogAuthFailureMiddleWare',
+    'wagtail.wagtailcore.middleware.SiteMiddleware',
+    'wagtail.wagtailredirects.middleware.RedirectMiddleware',
 )
 
 REST_FRAMEWORK = {
@@ -364,6 +366,20 @@ TENANT_APPS = (
     'django.contrib.humanize',
     'django_tools',
     'taggit',
+
+    'wagtail.wagtailforms',
+    'wagtail.wagtailredirects',
+    'wagtail.wagtailembeds',
+    'wagtail.wagtailsites',
+    'wagtail.wagtailusers',
+    'wagtail.wagtailsnippets',
+    'wagtail.wagtaildocs',
+    'wagtail.wagtailimages',
+    'wagtail.wagtailsearch',
+    'wagtail.wagtailadmin',
+    'wagtail.wagtailcore',
+
+    'modelcluster',
 )
 
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
@@ -766,3 +782,6 @@ DJANGO_MONEY_RATES = {
 AUTO_CONVERT_MONEY = False
 
 LOCKDOWN_URL_EXCEPTIONS = [r'^/payments_vitepay/status_update/']
+
+WAGTAIL_SITE_NAME = 'Site content'
+

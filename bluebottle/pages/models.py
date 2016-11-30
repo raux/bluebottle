@@ -9,6 +9,7 @@ from django_extensions.db.fields import (
     CreationDateTimeField, ModificationDateTimeField)
 from djchoices import DjangoChoices, ChoiceItem
 from fluent_contents.models import PlaceholderField
+from fluent_contents.models import ContentItem
 from fluent_contents.models.fields import ContentItemRelation
 from fluent_contents.rendering import render_placeholder
 
@@ -26,6 +27,18 @@ GROUP_PERMS = {
 
 def get_languages():
     return properties.LANGUAGES
+
+
+class ProjectsBlockItem(ContentItem):
+    title = models.CharField("Title", max_length=200)
+    projects = models.ManyToManyField('projects.Project')
+
+    class Meta:
+        verbose_name = "Projects block"
+        verbose_name_plural = "Projects blocks"
+
+    def __unicode__(self):
+        return self.title
 
 
 class Page(models.Model):
