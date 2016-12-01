@@ -6,12 +6,8 @@ from django.shortcuts import render_to_response
 from django.template.context import RequestContext
 from rest_framework_jwt.views import obtain_jwt_token, refresh_jwt_token
 
-
 from bluebottle.auth.views import GetAuthToken
 
-from wagtail.wagtailadmin import urls as wagtailadmin_urls
-from wagtail.wagtaildocs import urls as wagtaildocs_urls
-from wagtail.wagtailcore import urls as wagtail_urls
 
 urlpatterns = [
     url(r'^api/config',
@@ -34,8 +30,8 @@ urlpatterns = [
     url(r'^api/contact/',
         include('bluebottle.contact.urls.api')),
     url(r'^api/news/', include('bluebottle.news.urls.api')),
-    url(r'^api/pages/',
-        include('bluebottle.pages.urls.api')),
+    # url(r'^api/pages/',
+    #     include('bluebottle.pages.urls.api')),
     url(r'^api/quotes/',
         include('bluebottle.quotes.urls.api')),
     url(r'^api/slides/',
@@ -61,6 +57,8 @@ urlpatterns = [
         include('bluebottle.recurring_donations.urls.api')),
     url(r'^api/rewards/',
         include('bluebottle.rewards.urls.api')),
+    url(r'^api/cms/',
+        include('bluebottle.cms.urls.api')),
 
     # Homepage API urls
     url(r'^api/homepage/',
@@ -109,10 +107,6 @@ urlpatterns = [
         include('bluebottle.social.urls.api')),
 
     url(r'token/', include('token_auth.urls')),
-
-    url(r'^cms/', include(wagtailadmin_urls)),
-    url(r'^documents/', include(wagtaildocs_urls)),
-    url(r'^pages/', include(wagtail_urls)),
 
 ]
 

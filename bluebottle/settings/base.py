@@ -130,6 +130,7 @@ TEMPLATES = [
                 'tenant_extras.context_processors.conf_settings',
                 'tenant_extras.context_processors.tenant_properties'
             ],
+            'builtins': ['overextends.templatetags.overextends_tags'],
         },
     },
 ]
@@ -257,16 +258,17 @@ SHARED_APPS = (
     'localflavor',
     'filetransfers',
     'corsheaders',
-    'djmoney_rates'
+    'djmoney_rates',
+    'overextends',
 
 )
 
 TENANT_APPS = (
+    'django.contrib.contenttypes',
     'polymorphic',
     'modeltranslation',
 
     'social.apps.django_app.default',
-    'django.contrib.contenttypes',
     # Allow the Bluebottle common app to override the admin branding
     'bluebottle.common',
     'token_auth',
@@ -313,7 +315,7 @@ TENANT_APPS = (
     'bluebottle.contentplugins',
     'bluebottle.contact',
     'bluebottle.geo',
-    'bluebottle.pages',
+    # 'bluebottle.pages',
     'bluebottle.news',
     'bluebottle.slides',
     'bluebottle.quotes',
@@ -354,6 +356,7 @@ TENANT_APPS = (
     'bluebottle.fundraisers',
     'bluebottle.donations',
     'bluebottle.orders',
+    'bluebottle.cms',
 
     # CMS page contents
     'fluent_contents',
@@ -378,6 +381,7 @@ TENANT_APPS = (
     'wagtail.wagtailsearch',
     'wagtail.wagtailadmin',
     'wagtail.wagtailcore',
+
 
     'modelcluster',
 )

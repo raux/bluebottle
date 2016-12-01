@@ -7,6 +7,13 @@ from bluebottle.views import HomeView
 from bluebottle.auth.views import admin_password_reset
 from django.contrib.auth.views import password_reset_done, password_reset_confirm
 
+from wagtail.wagtailadmin import urls as wagtailadmin_urls
+from wagtail.wagtaildocs import urls as wagtaildocs_urls
+from wagtail.wagtailcore import urls as wagtail_urls
+
+
+from wagtail.wagtailsearch.urls import frontend as wagtailsearch_frontend_urls
+
 admin.autodiscover()
 
 
@@ -24,6 +31,12 @@ urlpatterns = [
         name='password_reset_confirm'),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^admin/exportdb/', include('exportdb.urls')),
+
+    url(r'^admin/cms/', include(wagtailadmin_urls)),
+    url(r'^cms/search/', include(wagtailsearch_frontend_urls)),
+    url(r'^cms/documents/', include(wagtaildocs_urls)),
+    url(r'^cms/', include(wagtail_urls)),
+
     url(r'^admin/', include(admin.site.urls)),
 
     # Other modules that need URLs exposed
