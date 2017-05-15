@@ -1,7 +1,9 @@
 import logging
+from datetime import datetime, timedelta
 
 from celery import shared_task
 from django.conf import settings
+from django.core.management import call_command
 
 from bluebottle.utils.utils import get_class
 from .exception import AnalyticsException
@@ -35,3 +37,17 @@ def _process_handler(backend, timestamp, tags, fields):
         handler.process(timestamp, tags, fields)
     except Exception as exc:
         raise AnalyticsException(exc)
+
+
+@shared_task
+def generate_engagement_metrics():
+    # Generate metrics for the today till current time. The timestamp will be of the end date and hence in the future.
+    # A point is uniquely identified by the measurement name, tag set, and timestamp. If you submit Line Protocol with
+    # the same measurement, tag set, and timestamp, but with a different field set, the field set becomes the union of
+    # the old field set and the new field set, where any conflicts favor the new field set.
+    # https://docs.influxdata.com/influxdb/v1.2/write_protocols/line_protocol_tutorial/#duplicate-points
+    today = datetime.utcnow().date()
+    tomorrow = today + timedelta(days=1)
+    logger.info("Generating Engagement Metrics: start date: {} end date: {}".format(today, tomorrow))
+    call_command('export_engagement_metrics', '--start', today.strftime('%Y-%m-%d'),
+                 '--end', tomorrow.strftime('%Y-%m-%d'), '--export-to', 'influxdb')
