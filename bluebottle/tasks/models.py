@@ -347,7 +347,8 @@ class TaskFile(models.Model):
 
 
 class TaskStatusLog(models.Model):
-    task = models.ForeignKey('tasks.Task')
+    task = models.ForeignKey('tasks.Task',
+                             related_name='%(app_label)s_%(class)s_related')
     status = models.CharField(_('status'), max_length=20)
     start = CreationDateTimeField(
         _('created'), help_text=_('When this task entered in this status.'))
@@ -377,7 +378,8 @@ class TaskStatusLog(models.Model):
 
 
 class TaskMemberStatusLog(models.Model):
-    task_member = models.ForeignKey('tasks.TaskMember')
+    task_member = models.ForeignKey('tasks.TaskMember',
+                                    related_name='%(app_label)s_%(class)s_related')
     status = models.CharField(_('status'), max_length=20)
     start = CreationDateTimeField(
         _('created'), help_text=_('When this task member entered in this status.'))
