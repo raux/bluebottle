@@ -13,6 +13,8 @@ from django.utils import dateparse
 from bluebottle.clients.models import Client
 from bluebottle.clients.utils import LocalTenant
 from bluebottle.members.models import Member
+from bluebottle.tasks.models import Task, TaskMember, TaskStatusLog, TaskMemberStatusLog
+from bluebottle.projects.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +126,15 @@ class Command(BaseCommand):
     def generate_raw_data(self):
         self.generate_members_registered_data()
         self.generate_members_active_data()
+        self.generate_tasks_submitted_data()
+        self.generate_tasks_realized_data()
+        self.generate_tasks_hours_data()
+        self.generate_projects_submitted_data()
+        self.generate_projects_initiated_data()
+        self.generate_projects_realized_data()
+        self.generate_project_initiators_data()
+        self.generate_task_members_data()
+        self.generate_task_hours_spent_data()
 
     def generate_members_registered_data(self):
         metrics = defaultdict(lambda: '')
@@ -141,6 +152,7 @@ class Command(BaseCommand):
                                          q4=metrics['q4']))
 
     def generate_members_active_data(self):
+        metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
                 project_initiators = Member.objects \
@@ -151,7 +163,7 @@ class Command(BaseCommand):
                                                      'done-incomplete']) \
                     .distinct('id') \
                     .values_list('id', flat=True)
-                print(project_initiators)
+
                 task_members = Member.objects \
                     .filter(
                 tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__gte=time_period.start_date,
@@ -160,103 +172,190 @@ class Command(BaseCommand):
                     .distinct('id') \
                     .values_list('id', flat=True)
 
-                print(len(task_members))
+                metrics['q{}'.format(quarter)] = len(set(project_initiators) | set(task_members))
 
-    def generate_tasks_submitted_date(self):
-        pass
+        self.raw_data.append(self.Metric(name='Members Active',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
+
+    def generate_tasks_submitted_data(self):
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+
+                tasks = Task.objects.\
+                    filter(tasks_taskstatuslog_related__start__gte=time_period.start_date,
+                           tasks_taskstatuslog_related__start__lte=time_period.end_date,
+                           tasks_taskstatuslog_related__status__in=['open', 'in progress', 'realized']).\
+                    order_by('id').\
+                    distinct('id').\
+                    values_list('id', flat=True)
+
+                metrics['q{}'.format(quarter)] = len(tasks)
+
+        self.raw_data.append(self.Metric(name='Activities Submitted',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
 
     def generate_tasks_realized_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                tasks = Task.objects. \
+                    filter(tasks_taskstatuslog_related__start__gte=time_period.start_date,
+                           tasks_taskstatuslog_related__start__lte=time_period.end_date,
+                           tasks_taskstatuslog_related__status='realized'). \
+                    order_by('id'). \
+                    distinct('id'). \
+                    values_list('id', flat=True)
+
+                metrics['q{}'.format(quarter)] = len(tasks)
+
+        self.raw_data.append(self.Metric(name='Activities Realized',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
 
     def generate_tasks_hours_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                total_time_spent = Member.objects \
+                    .filter(tasks_taskmember_related__created__gte=time_period.start_date,
+                            tasks_taskmember_related__created__lte=time_period.end_date,
+                            tasks_taskmember_related__status='realized',
+                            tasks_taskmember_related__time_spent__gt=0) \
+                    .aggregate(Sum('tasks_taskmember_related__time_spent'))
+
+                metrics['q{}'.format(quarter)] = total_time_spent['tasks_taskmember_related__time_spent__sum']
+
+        self.raw_data.append(self.Metric(name='Activities Hours',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
 
     def generate_projects_submitted_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                total_projects = Project.objects \
+                    .filter(created__gte=time_period.start_date,
+                            created__lte=time_period.end_date)\
+                    .count()
+
+                metrics['q{}'.format(quarter)] = total_projects
+
+        self.raw_data.append(self.Metric(name='Projects Submitted',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
+
+    def generate_projects_initiated_data(self):
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                total_projects = Project.objects \
+                    .filter(created__gte=time_period.start_date,
+                            created__lte=time_period.end_date,
+                            status__slug__in=['plan-submitted',
+                                            'plan-needs-work',
+                                            'voting-done',
+                                            'campaign',
+                                            'done-incomplete',
+                                            'plan-new',
+                                            'voting',
+                                            'to-be-continued',
+                                            'done-complete'
+                                            ])\
+                    .count()
+
+                metrics['q{}'.format(quarter)] = total_projects
+
+        self.raw_data.append(self.Metric(name='Projects Initiated',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
 
     def generate_projects_realized_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                total_projects = Project.objects \
+                    .filter(created__gte=time_period.start_date,
+                            created__lte=time_period.end_date,
+                            status__slug__in=['done-incomplete','done-complete'])\
+                    .count()
+
+                metrics['q{}'.format(quarter)] = total_projects
+
+        self.raw_data.append(self.Metric(name='Projects Realized',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
 
     def generate_project_initiators_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                members = Member.objects \
+                    .filter(owner__created__gte=time_period.start_date,
+                            owner__created__lte=time_period.end_date) \
+                    .distinct('id') \
+                    .count()
+
+                metrics['q{}'.format(quarter)] = members
+
+        self.raw_data.append(self.Metric(name='Projects Initators',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
+
 
     def generate_task_members_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                task_members = Member.objects \
+                    .filter(
+                tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__gte=time_period.start_date,
+                tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__lte=time_period.end_date,
+                tasks_taskmember_related__tasks_taskmemberstatuslog_related__status__in=['accepted', 'realized']) \
+                    .distinct('id') \
+                    .values_list('id', flat=True)
+
+                metrics['q{}'.format(quarter)] = len(task_members)
+
+        self.raw_data.append(self.Metric(name='Activity Members',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
 
     def generate_task_hours_spent_data(self):
-        pass
+        metrics = defaultdict(lambda: '')
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+                total_time_spent = Member.objects \
+                    .filter(tasks_taskmember_related__created__gte=time_period.start_date,
+                            tasks_taskmember_related__created__lte=time_period.end_date,
+                            tasks_taskmember_related__status='realized',
+                            tasks_taskmember_related__time_spent__gt=0) \
+                    .aggregate(Sum('tasks_taskmember_related__time_spent'))
 
-    def generate_comments_raw_data(self, raw_data):
-        members = Member.objects \
-            .filter(wallpost_wallpost__created__gte=self.start_date,
-                    wallpost_wallpost__created__lt=self.end_date) \
-            .annotate(comments_total=Count('wallpost_wallpost')) \
-            .values('id', 'comments_total')
+                metrics['q{}'.format(quarter)] = total_time_spent['tasks_taskmember_related__time_spent__sum']
 
-        for member in members:
-            raw_data[member['id']]['comments'] = member['comments_total']
-
-        return raw_data
-
-    def generate_votes_raw_data(self, raw_data):
-        members = Member.objects \
-            .filter(vote__created__gte=self.start_date, vote__created__lt=self.end_date) \
-            .annotate(votes_total=Count('vote')) \
-            .values('id', 'votes_total')
-
-        for member in members:
-            raw_data[member['id']]['votes'] = member['votes_total']
-
-        return raw_data
-
-    def generate_donations_raw_data(self, raw_data):
-        members = Member.objects \
-            .filter(order__created__gte=self.start_date, order__created__lt=self.end_date,
-                    order__status="success", id__isnull=False) \
-            .annotate(donations_total=Count('order')) \
-            .values('id', 'donations_total')
-
-        for member in members:
-            raw_data[member['id']]['donations'] = member['donations_total']
-
-        return raw_data
-
-    def generate_fundraisers_raw_data(self, raw_data):
-        members = Member.objects \
-            .filter(fundraiser__created__gte=self.start_date, fundraiser__created__lt=self.end_date) \
-            .annotate(fundraisers_total=Count('fundraiser')) \
-            .values('id', 'fundraisers_total')
-
-        for member in members:
-            raw_data[member['id']]['fundraisers'] = member['fundraisers_total']
-
-        return raw_data
-
-    def generate_projects_raw_data(self, raw_data):
-        members = Member.objects \
-            .filter(owner__created__gte=self.start_date,
-                    owner__created__lt=self.end_date,
-                    owner__status__slug__in=['voting', 'voting-done', 'campaign',
-                                             'to-be-continued', 'done-complete',
-                                             'done-incomplete']) \
-            .annotate(projects_total=Count('owner')) \
-            .values('id', 'projects_total')
-
-        for member in members:
-            raw_data[member['id']]['projects'] = member['projects_total']
-
-        return raw_data
-
-    def generate_tasks_raw_data(self, raw_data):
-        members = Member.objects \
-            .filter(tasks_taskmember_related__created__gte=self.start_date,
-                    tasks_taskmember_related__created__lt=self.end_date,
-                    tasks_taskmember_related__status='realized',
-                    tasks_taskmember_related__time_spent__gt=0) \
-            .annotate(tasks_total=Sum('tasks_taskmember_related__time_spent')) \
-            .values('id', 'tasks_total')
-
-        for member in members:
-            raw_data[member['id']]['tasks'] = member['tasks_total']
-
-        return raw_data
+        self.raw_data.append(self.Metric(name='Hours Spent',
+                                         q1=metrics['q1'],
+                                         q2=metrics['q2'],
+                                         q3=metrics['q3'],
+                                         q4=metrics['q4']))
