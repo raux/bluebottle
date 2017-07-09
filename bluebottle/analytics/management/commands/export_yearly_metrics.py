@@ -406,9 +406,9 @@ class Command(BaseCommand):
 
         metrics_location = []
 
-        total_members = Member.objects.count()
-        print('Total Members: {}'.format(total_members))
-        print('-' * 8)
+        # total_members = Member.objects.count()
+        # print('Total Members: {}'.format(total_members))
+        #
 
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
@@ -500,7 +500,4 @@ class Command(BaseCommand):
                                                            location_type='Country',
                                                            location_name=location,
                                                            total=len(set(members))))
-
-                print('-'*8)
-
         return metrics_location
