@@ -414,11 +414,11 @@ class Command(BaseCommand):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
 
                 # Number of realized projects global/per country
-                total_projects = Project.objects \
-                    .filter(created__gte=time_period.start_date,
-                            created__lte=time_period.end_date,
-                            status__slug__in=['done-incomplete',
-                                              'done-complete'])
+                # total_projects = Project.objects \
+                #     .filter(created__gte=time_period.start_date,
+                #             created__lte=time_period.end_date,
+                #             status__slug__in=['done-incomplete',
+                #                               'done-complete'])
                 # print('Total Projects Realized till end of Q{}: {}'.format(quarter, len(total_projects)))
 
                 projects_per_country = Project.objects \
@@ -438,11 +438,11 @@ class Command(BaseCommand):
                                                            total=data['total']))
 
                 # Number of realized participants global/ per country
-                total_realized_task_members = TaskMember.objects\
-                                        .filter(created__gte=time_period.start_date,
-                                                created__lte=time_period.end_date,
-                                                status='realized')\
-                                        .count()
+                # total_realized_task_members = TaskMember.objects\
+                #                         .filter(created__gte=time_period.start_date,
+                #                                 created__lte=time_period.end_date,
+                #                                 status='realized')\
+                #                         .count()
                 # print('Realized participants till end of Q{}: {}'.format(quarter, total_realized_task_members))
 
                 locations = []
@@ -462,7 +462,7 @@ class Command(BaseCommand):
                                                            total=total))
 
                 # Number of hours realized global/Per country
-                total_realized_hours = realized_task_members.aggregate(total_hours=Sum('time_spent'))
+                # total_realized_hours = realized_task_members.aggregate(total_hours=Sum('time_spent'))
                 # print('Realized Hours till end of Q{}: {}'.format(quarter, total_realized_hours))
 
                 total_realized_hours_by_location = defaultdict(int)
