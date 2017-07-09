@@ -1,6 +1,6 @@
 # flake8: noqa
 import logging
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, Counter
 from datetime import datetime
 import pytz
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Export the DLL yearly metrics'
+    help = 'Export the yearly metrics'
 
     def __init__(self, **kwargs):
         super(Command, self).__init__(**kwargs)
@@ -32,10 +32,17 @@ class Command(BaseCommand):
 
         self.year = None
         self.organisation = ''
-        self.row_counter_raw_metric_data = 1
+
+        self.row_counter_metric_data = 1
+        self.row_counter_segmented_data = 1
+
         self.time_periods = None
+
         self.raw_data = []
+        self.segmented_data = []
+
         self.Metric = namedtuple('Metric', 'name q1 q2 q3 q4')
+        self.LocationMetric = namedtuple('LocationMetric', 'name quarter location_type location_name')
 
     def add_arguments(self, parser):
         parser.add_argument('--year', metavar='YYYY', action='store', dest='year', required=True,
@@ -82,10 +89,11 @@ class Command(BaseCommand):
                     with LocalTenant(client, clear_tenant=True):
                         self.organisation = client.client_name
                         logger.info('export tenant:{}'.format(self.organisation))
-                        self.generate_raw_data()
-                        self.generate_raw_data_worksheet(workbook, self.raw_data)
-                        # Reset raw data
+                        self.generate_metric_data()
+                        self.generate_metric_data_worksheet(workbook, self.raw_data)
+                        # Reset data
                         self.raw_data = []
+                        self.segmented_data = []
 
     @staticmethod
     def get_xls_file_name(year):
@@ -99,7 +107,7 @@ class Command(BaseCommand):
             worksheet.write_row(0, 0, headers)
         return worksheet
 
-    def generate_raw_data_worksheet(self, workbook, raw_data):
+    def generate_metric_data_worksheet(self, workbook, raw_data):
         metric_data_worksheet = self.initialize_metric_data_worksheet(workbook)
         self.write_metric_data(metric_data_worksheet, raw_data)
         return metric_data_worksheet
@@ -109,39 +117,67 @@ class Command(BaseCommand):
         headers = ('Metric', 'Organisation', 'Q1', 'Q2', 'Q3', 'Q4')
         return self.initialize_work_sheet(workbook, name, headers)
 
+    def initialize_segmented_data_worksheet(self, workbook):
+        name = 'Segmented Results'
+        headers = ('Metric', 'Quarter', 'Location Type', 'Location Name', 'Count')
+        return self.initialize_work_sheet(workbook, name, headers)
+
     def write_metric_data(self, worksheet, data):
         # List of named tuples
         # Metric = collections.namedtuple('Metric', 'name q1 q2 q3 q4')
 
         for metric in data:
-            worksheet.write(self.row_counter_raw_metric_data, 0, metric.name)
-            worksheet.write(self.row_counter_raw_metric_data, 1, self.organisation)
-            worksheet.write(self.row_counter_raw_metric_data, 2, metric.q1)
-            worksheet.write(self.row_counter_raw_metric_data, 3, metric.q2)
-            worksheet.write(self.row_counter_raw_metric_data, 4, metric.q3)
-            worksheet.write(self.row_counter_raw_metric_data, 5, metric.q4)
+            worksheet.write(self.row_counter_metric_data, 0, metric.name)
+            worksheet.write(self.row_counter_metric_data, 1, metric.quarter)
+            worksheet.write(self.row_counter_metric_data, 2, metric.q1)
+            worksheet.write(self.row_counter_metric_data, 3, metric.q2)
+            worksheet.write(self.row_counter_metric_data, 4, metric.q3)
+            worksheet.write(self.row_counter_metric_data, 5, metric.q4)
 
-            self.row_counter_raw_metric_data += 1
+            self.row_counter_metric_data += 1
 
-    def generate_raw_data(self):
-        self.generate_members_registered_data()
-        self.generate_members_active_data()
-        self.generate_tasks_submitted_data()
-        self.generate_tasks_realized_data()
-        self.generate_tasks_hours_data()
-        self.generate_projects_submitted_data()
-        self.generate_projects_initiated_data()
-        self.generate_projects_realized_data()
-        self.generate_project_initiators_data()
-        self.generate_task_members_data()
-        self.generate_task_hours_spent_data()
+    def write_segmented_data(self, worksheet, data):
+        # List of named tuples
+        # namedtuple('LocationMetric', 'name quarter location_type location_name')
+
+        for metric in data:
+            worksheet.write(self.row_counter_metric_data, 0, metric.name)
+            worksheet.write(self.row_counter_metric_data, 1, metric.quarter)
+            worksheet.write(self.row_counter_metric_data, 2, metric.location_type)
+            worksheet.write(self.row_counter_metric_data, 3, metric.location_name)
+            worksheet.write(self.row_counter_metric_data, 4, metric.count)
+
+            self.row_counter_metric_data += 1
+
+    def generate_metric_data(self):
+
+        self.generate_unique_members()
+        # self.generate_members_registered_data()
+        # self.generate_members_active_data()
+        # self.generate_tasks_submitted_data()
+        # self.generate_tasks_realized_data()
+        # self.generate_tasks_hours_data()
+        # self.generate_projects_submitted_data()
+        # self.generate_projects_initiated_data()
+        # self.generate_projects_realized_data()
+        # self.generate_project_initiators_data()
+        # self.generate_task_members_data()
+        # self.generate_task_hours_spent_data()
+        pass
+
+    def generate_segmented_data(self):
+
+        # self.generate_project_initiators_by_location()
+        # self.generate_members_registered_data_by_location()
+        pass
 
     def generate_members_registered_data(self):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
                 members_count = Member.objects \
-                    .filter(date_joined__gte=time_period.start_date, date_joined__lte=time_period.end_date) \
+                    .filter(date_joined__gte=time_period.start_date,
+                            date_joined__lte=time_period.end_date) \
                     .count()
                 metrics['q{}'.format(quarter)] = members_count
 
@@ -158,17 +194,19 @@ class Command(BaseCommand):
                 project_initiators = Member.objects \
                     .filter(owner__created__gte=time_period.start_date,
                             owner__created__lte=time_period.end_date,
-                            owner__status__slug__in=['voting', 'voting-done', 'campaign',
-                                                     'to-be-continued', 'done-complete',
+                            owner__status__slug__in=['voting',
+                                                     'voting-done',
+                                                     'campaign',
+                                                     'to-be-continued',
+                                                     'done-complete',
                                                      'done-incomplete']) \
                     .distinct('id') \
                     .values_list('id', flat=True)
 
                 task_members = Member.objects \
-                    .filter(
-                tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__gte=time_period.start_date,
-                tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__lte=time_period.end_date,
-                tasks_taskmember_related__tasks_taskmemberstatuslog_related__status__in=['accepted', 'realized']) \
+                    .filter(tasks_taskmember_related__created__gte=time_period.start_date,
+                            tasks_taskmember_related__created__lte=time_period.end_date,
+                            tasks_taskmember_related__status__in=['accepted', 'realized']) \
                     .distinct('id') \
                     .values_list('id', flat=True)
 
@@ -185,15 +223,15 @@ class Command(BaseCommand):
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
 
-                tasks = Task.objects.\
-                    filter(tasks_taskstatuslog_related__start__gte=time_period.start_date,
-                           tasks_taskstatuslog_related__start__lte=time_period.end_date,
-                           tasks_taskstatuslog_related__status__in=['open', 'in progress', 'realized']).\
-                    order_by('id').\
-                    distinct('id').\
-                    values_list('id', flat=True)
+                tasks = Task.objects\
+                    .filter(created__gte=time_period.start_date,
+                           created__lte=time_period.end_date,
+                           status__in=['open',
+                                       'in progress',
+                                       'realized'])\
+                    .count()
 
-                metrics['q{}'.format(quarter)] = len(tasks)
+                metrics['q{}'.format(quarter)] = tasks
 
         self.raw_data.append(self.Metric(name='Activities Submitted',
                                          q1=metrics['q1'],
@@ -205,15 +243,13 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                tasks = Task.objects. \
-                    filter(tasks_taskstatuslog_related__start__gte=time_period.start_date,
-                           tasks_taskstatuslog_related__start__lte=time_period.end_date,
-                           tasks_taskstatuslog_related__status='realized'). \
-                    order_by('id'). \
-                    distinct('id'). \
-                    values_list('id', flat=True)
+                tasks = Task.objects\
+                    .filter(created__gte=time_period.start_date,
+                           created__lte=time_period.end_date,
+                           status='realized')\
+                    .count()
 
-                metrics['q{}'.format(quarter)] = len(tasks)
+                metrics['q{}'.format(quarter)] = tasks
 
         self.raw_data.append(self.Metric(name='Activities Realized',
                                          q1=metrics['q1'],
@@ -225,14 +261,14 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                total_time_spent = Member.objects \
+                total_time_spent = Member.objects\
                     .filter(tasks_taskmember_related__created__gte=time_period.start_date,
                             tasks_taskmember_related__created__lte=time_period.end_date,
                             tasks_taskmember_related__status='realized',
-                            tasks_taskmember_related__time_spent__gt=0) \
-                    .aggregate(Sum('tasks_taskmember_related__time_spent'))
+                            tasks_taskmember_related__time_spent__gt=0)\
+                    .aggregate(total_hours=Sum('tasks_taskmember_related__time_spent'))
 
-                metrics['q{}'.format(quarter)] = total_time_spent['tasks_taskmember_related__time_spent__sum']
+                metrics['q{}'.format(quarter)] = total_time_spent['total_hours']
 
         self.raw_data.append(self.Metric(name='Activities Hours',
                                          q1=metrics['q1'],
@@ -244,7 +280,7 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                total_projects = Project.objects \
+                total_projects = Project.objects\
                     .filter(created__gte=time_period.start_date,
                             created__lte=time_period.end_date)\
                     .count()
@@ -261,18 +297,18 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                total_projects = Project.objects \
+                total_projects = Project.objects\
                     .filter(created__gte=time_period.start_date,
                             created__lte=time_period.end_date,
                             status__slug__in=['plan-submitted',
-                                            'plan-needs-work',
-                                            'voting-done',
-                                            'campaign',
-                                            'done-incomplete',
-                                            'plan-new',
-                                            'voting',
-                                            'to-be-continued',
-                                            'done-complete'
+                                              'plan-needs-work',
+                                              'voting-done',
+                                              'campaign',
+                                              'done-incomplete',
+                                              'plan-new',
+                                              'voting',
+                                              'to-be-continued',
+                                              'done-complete'
                                             ])\
                     .count()
 
@@ -288,10 +324,11 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                total_projects = Project.objects \
+                total_projects = Project.objects\
                     .filter(created__gte=time_period.start_date,
                             created__lte=time_period.end_date,
-                            status__slug__in=['done-incomplete','done-complete'])\
+                            status__slug__in=['done-incomplete',
+                                              'done-complete'])\
                     .count()
 
                 metrics['q{}'.format(quarter)] = total_projects
@@ -306,7 +343,7 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                members = Member.objects \
+                members = Member.objects\
                     .filter(owner__created__gte=time_period.start_date,
                             owner__created__lte=time_period.end_date) \
                     .distinct('id') \
@@ -325,12 +362,11 @@ class Command(BaseCommand):
         metrics = defaultdict(lambda: '')
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
-                task_members = Member.objects \
-                    .filter(
-                tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__gte=time_period.start_date,
-                tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__lte=time_period.end_date,
-                tasks_taskmember_related__tasks_taskmemberstatuslog_related__status__in=['accepted', 'realized']) \
-                    .distinct('id') \
+                task_members = Member.objects\
+                    .filter(tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__gte=time_period.start_date,
+                            tasks_taskmember_related__tasks_taskmemberstatuslog_related__start__lte=time_period.end_date,
+                            tasks_taskmember_related__tasks_taskmemberstatuslog_related__status__in=['accepted', 'realized']) \
+                    .distinct('id')\
                     .values_list('id', flat=True)
 
                 metrics['q{}'.format(quarter)] = len(task_members)
@@ -359,3 +395,144 @@ class Command(BaseCommand):
                                          q2=metrics['q2'],
                                          q3=metrics['q3'],
                                          q4=metrics['q4']))
+
+    # def generate_project_initiators_by_location(self):
+    #     # namedtuple('LocationMetric', 'name quarter location_type location_name')
+    #     for quarter, time_period in enumerate(self.time_periods, start=1):
+    #         if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+    #             project_initiators = Member.objects \
+    #                 .filter(owner__created__gte=time_period.start_date,
+    #                         owner__created__lte=time_period.end_date,
+    #                         owner__status__slug__in=['voting', 'voting-done', 'campaign',
+    #                                                  'to-be-continued', 'done-complete',
+    #                                                  'done-incomplete']) \
+    #                 .values('owner__location__city')\
+    #                 .annotate(members_count=Count('id'))
+    #
+    #             print(time_period)
+    #             for initiator in project_initiators:
+    #                 print(initiator)
+    #
+    #
+    # def generate_members_registered_data_by_location(self):
+    #     metrics = defaultdict(lambda: '')
+    #     for quarter, time_period in enumerate(self.time_periods, start=1):
+    #         if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+    #             members_count = Member.objects \
+    #                 .filter(date_joined__gte=time_period.start_date,
+    #                         date_joined__lte=time_period.end_date) \
+    #                 .values('location__country__name') \
+    #                 .annotate(members_count=Count('id'))
+    #             metrics['q{}'.format(quarter)] = members_count
+    #
+    #     self.raw_data.append(self.Metric(name='Members Registered',
+    #                                      q1=metrics['q1'],
+    #                                      q2=metrics['q2'],
+    #                                      q3=metrics['q3'],
+    #                                      q4=metrics['q4']))
+
+    def generate_unique_members(self):
+
+        LocationMetric = namedtuple('LocationMetric', 'name quarter location_type location_name total')
+
+        metrics_location = []
+
+        total_members = Member.objects.count()
+        print('Total Members: {}'.format(total_members))
+        print('-' * 8)
+
+        for quarter, time_period in enumerate(self.time_periods, start=1):
+            if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
+
+                # Number of realized projects global/per country
+                total_projects = Project.objects \
+                    .filter(created__gte=time_period.start_date,
+                            created__lte=time_period.end_date,
+                            status__slug__in=['done-incomplete',
+                                              'done-complete'])
+                print('Total Projects Realized till end of Q{}: {}'.format(quarter, len(total_projects)))
+
+                projects_per_country = Project.objects \
+                                            .filter(created__gte=time_period.start_date,
+                                                    created__lte=time_period.end_date,
+                                                    status__slug__in=['done-incomplete',
+                                                                      'done-complete'])\
+                                            .values('location__country__name')\
+                                            .annotate(total=Count('id'))\
+                                            .order_by('total')
+
+                for data in projects_per_country:
+                    metrics_location.append(LocationMetric(name='Realized Projects',
+                                                           quarter='Q{}'.format(quarter),
+                                                           location_type='Country',
+                                                           location_name=data['location__country__name'],
+                                                           total=data['total']))
+
+                # Number of realized participants global/ per country
+                total_realized_task_members = TaskMember.objects\
+                                        .filter(created__gte=time_period.start_date,
+                                                created__lte=time_period.end_date,
+                                                status='realized')\
+                                        .count()
+
+                print('Realized participants till end of Q{}: {}'.format(quarter, total_realized_task_members))
+
+                locations = []
+                realized_task_members = TaskMember.objects \
+                                                .filter(created__gte=time_period.start_date,
+                                                        created__lte=time_period.end_date,
+                                                        status='realized')
+
+                for task_member in realized_task_members:
+                    locations.append(task_member.project.location.country.name)
+
+                for location, total in Counter(locations).iteritems():
+                    metrics_location.append(LocationMetric(name='Realized Participants',
+                                                           quarter='Q{}'.format(quarter),
+                                                           location_type='Country',
+                                                           location_name=location,
+                                                           total=total))
+
+                # Number of hours realized global/Per country
+                total_realized_hours = realized_task_members.aggregate(total_hours=Sum('time_spent'))
+
+                print('Realized Hours till end of Q{}: {}'.format(quarter, total_realized_hours))
+
+                total_realized_hours_by_location = defaultdict(int)
+                for task_member in realized_task_members:
+                    total_realized_hours_by_location[task_member.project.location.country.name] += task_member.time_spent
+
+                for location, total in total_realized_hours_by_location.iteritems():
+                    metrics_location.append(LocationMetric(name='Realized Hours',
+                                                           quarter='Q{}'.format(quarter),
+                                                           location_type='Country',
+                                                           location_name=location,
+                                                           total=total))
+
+                # Number of unique members global/per country
+                location_members = defaultdict(list)
+
+                projects = Project.objects.filter(created__gte=time_period.start_date,
+                                                  created__lte=time_period.end_date,
+                                                  status__slug__in=['voting',
+                                                                    'voting-done',
+                                                                    'campaign',
+                                                                    'done-complete',
+                                                                    'done-incomplete'])
+
+                for project in projects:
+                    location_members[project.location.country.name].append(project.owner.id)
+
+                    task_members = TaskMember.objects.filter(task__project=project)
+
+                    for task_member in task_members:
+                        location_members[project.location.country.name].append(task_member.id)
+
+                for location, members in location_members.iteritems():
+                    metrics_location.append(LocationMetric(name='Unique Members',
+                                                           quarter='Q{}'.format(quarter),
+                                                           location_type='Country',
+                                                           location_name=location,
+                                                           total=len(set(members))))
+
+                print('-'*8)

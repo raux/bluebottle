@@ -56,8 +56,10 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectPhaseLog(models.Model):
-    project = models.ForeignKey('projects.Project')
-    status = models.ForeignKey('bb_projects.ProjectPhase')
+    project = models.ForeignKey('projects.Project',
+                                related_name='%(app_label)s_%(class)s_project_related')
+    status = models.ForeignKey('bb_projects.ProjectPhase',
+                               related_name='%(app_label)s_%(class)s_status_related')
     start = CreationDateTimeField(
         _('created'), help_text=_('When this project entered in this status.')
     )

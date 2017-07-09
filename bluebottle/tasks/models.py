@@ -54,7 +54,8 @@ class Task(models.Model, PreviousStatusMixin):
                                 blank=True)
     people_needed = models.PositiveIntegerField(_('people needed'), default=1)
 
-    project = models.ForeignKey('projects.Project')
+    project = models.ForeignKey('projects.Project',
+                                related_name='%(app_label)s_%(class)s_project_related')
     # See Django docs on issues with related name and an (abstract) base class:
     # https://docs.djangoproject.com/en/dev/topics/db/models/#be-careful-with-related-name
     author = models.ForeignKey('members.Member',
