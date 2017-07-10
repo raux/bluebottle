@@ -413,7 +413,9 @@ class Command(BaseCommand):
         for quarter, time_period in enumerate(self.time_periods, start=1):
             if datetime.utcnow().replace(tzinfo=pytz.utc) >= time_period.end_date:
 
+
                 # Number of realized projects global/per country
+
                 # total_projects = Project.objects \
                 #     .filter(created__gte=time_period.start_date,
                 #             created__lte=time_period.end_date,
@@ -437,7 +439,9 @@ class Command(BaseCommand):
                                                            location_city=data['location__city'],
                                                            total=data['total']))
 
+
                 # Number of realized participants global/ per country
+
                 # total_realized_task_members = TaskMember.objects\
                 #                         .filter(created__gte=time_period.start_date,
                 #                                 created__lte=time_period.end_date,
@@ -445,24 +449,26 @@ class Command(BaseCommand):
                 #                         .count()
                 # print('Realized participants till end of Q{}: {}'.format(quarter, total_realized_task_members))
 
-                locations = []
+                locations = defaultdict(set)
                 realized_task_members = TaskMember.objects \
-                                                .filter(created__gte=time_period.start_date,
-                                                        created__lte=time_period.end_date,
+                                                .filter(task__deadline__gte=time_period.start_date,
+                                                        task__deadline__lte=time_period.end_date,
                                                         status='realized')
 
                 for task_member in realized_task_members:
-                    locations.append(u'{}__{}'.format(task_member.project.location.country.name, task_member.project.location.city))
+                    locations[u'{}__{}'.format(task_member.project.location.country.name, task_member.project.location.city)].add(task_member.id)
 
-                for location, total in Counter(locations).iteritems():
+                for location, members in locations.iteritems():
                     country, city = location.split('__')
-                    metrics_location.append(LocationMetric(name='Realized Participants',
+                    metrics_location.append(LocationMetric(name='Unique Realized Participants',
                                                            quarter='Q{}'.format(quarter),
                                                            location_country=country,
                                                            location_city=city,
-                                                           total=total))
+                                                           total=len(members)))
+
 
                 # Number of hours realized global/Per country
+
                 # total_realized_hours = realized_task_members.aggregate(total_hours=Sum('time_spent'))
                 # print('Realized Hours till end of Q{}: {}'.format(quarter, total_realized_hours))
 
