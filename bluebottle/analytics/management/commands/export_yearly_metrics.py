@@ -129,7 +129,7 @@ class Command(BaseCommand):
 
     def initialize_segmented_data_worksheet(self, workbook):
         name = 'Segmented Results'
-        headers = ('Metric', 'Quarter', 'Location Type', 'Location Name', 'Total')
+        headers = ('Metric', 'Quarter', 'Country', 'City', 'Total')
         return self.initialize_work_sheet(workbook, name, headers)
 
     def write_metric_data(self, worksheet, data):
@@ -148,13 +148,13 @@ class Command(BaseCommand):
 
     def write_segmented_data(self, worksheet, data):
         # List of named tuples
-        # namedtuple('LocationMetric', 'name quarter location_type location_name')
+        # namedtuple('LocationMetric', 'name quarter location_country location_city total')
 
         for metric in data:
             worksheet.write(self.row_counter_metric_data, 0, metric.name)
             worksheet.write(self.row_counter_metric_data, 1, metric.quarter)
-            worksheet.write(self.row_counter_metric_data, 2, metric.location_type)
-            worksheet.write(self.row_counter_metric_data, 3, metric.location_name)
+            worksheet.write(self.row_counter_metric_data, 2, metric.location_country)
+            worksheet.write(self.row_counter_metric_data, 3, metric.location_city)
             worksheet.write(self.row_counter_metric_data, 4, metric.total)
 
             self.row_counter_metric_data += 1
@@ -402,7 +402,7 @@ class Command(BaseCommand):
 
     def generate_segmented_data(self):
 
-        LocationMetric = namedtuple('LocationMetric', 'name quarter location_type location_name total')
+        LocationMetric = namedtuple('LocationMetric', 'name quarter location_country location_city total')
 
         metrics_location = []
 
@@ -426,15 +426,15 @@ class Command(BaseCommand):
                                                     created__lte=time_period.end_date,
                                                     status__slug__in=['done-incomplete',
                                                                       'done-complete'])\
-                                            .values('location__country__name')\
+                                            .values('location__country__name', 'location__city')\
                                             .annotate(total=Count('id'))\
                                             .order_by('total')
 
                 for data in projects_per_country:
                     metrics_location.append(LocationMetric(name='Realized Projects',
                                                            quarter='Q{}'.format(quarter),
-                                                           location_type='Country',
-                                                           location_name=data['location__country__name'],
+                                                           location_country=data['location__country__name'],
+                                                           location_city=data['location__city'],
                                                            total=data['total']))
 
                 # Number of realized participants global/ per country
@@ -452,13 +452,14 @@ class Command(BaseCommand):
                                                         status='realized')
 
                 for task_member in realized_task_members:
-                    locations.append(task_member.project.location.country.name)
+                    locations.append(u'{}__{}'.format(task_member.project.location.country.name, task_member.project.location.city))
 
                 for location, total in Counter(locations).iteritems():
+                    country, city = location.split('__')
                     metrics_location.append(LocationMetric(name='Realized Participants',
                                                            quarter='Q{}'.format(quarter),
-                                                           location_type='Country',
-                                                           location_name=location,
+                                                           location_country=country,
+                                                           location_city=city,
                                                            total=total))
 
                 # Number of hours realized global/Per country
@@ -467,13 +468,14 @@ class Command(BaseCommand):
 
                 total_realized_hours_by_location = defaultdict(int)
                 for task_member in realized_task_members:
-                    total_realized_hours_by_location[task_member.project.location.country.name] += task_member.time_spent
+                    total_realized_hours_by_location[u'{}__{}'.format(task_member.project.location.country.name, task_member.project.location.city)] += task_member.time_spent
 
                 for location, total in total_realized_hours_by_location.iteritems():
+                    country, city = location.split('__')
                     metrics_location.append(LocationMetric(name='Realized Hours',
                                                            quarter='Q{}'.format(quarter),
-                                                           location_type='Country',
-                                                           location_name=location,
+                                                           location_country=country,
+                                                           location_city=city,
                                                            total=total))
 
                 # Number of unique members global/per country
@@ -487,17 +489,18 @@ class Command(BaseCommand):
                                                                     'done-incomplete'])
 
                 for project in projects:
-                    location_members[project.location.country.name].append(project.owner.id)
+                    location_members[u'{}__{}'.format(project.location.country.name, project.location.city)].append(project.owner.id)
 
                     task_members = TaskMember.objects.filter(task__project=project)
 
                     for task_member in task_members:
-                        location_members[project.location.country.name].append(task_member.id)
+                        location_members[u'{}__{}'.format(project.location.country.name, project.location.city)].append(task_member.id)
 
                 for location, members in location_members.iteritems():
+                    country, city = location.split('__')
                     metrics_location.append(LocationMetric(name='Unique Members',
                                                            quarter='Q{}'.format(quarter),
-                                                           location_type='Country',
-                                                           location_name=location,
+                                                           location_country=country,
+                                                           location_city=city,
                                                            total=len(set(members))))
         return metrics_location
