@@ -3,8 +3,25 @@ from rest_framework import permissions
 from bluebottle.fundraisers.models import Fundraiser
 from bluebottle.tasks.models import Task
 from bluebottle.projects.models import Project
+from bluebottle.utils.permissions import IsOwner as BaseIsOwner
 
 from .models import MediaWallpost
+
+
+class IsOwner(BaseIsOwner):
+    def get_parent_from_request(self, request):
+        if request.data:
+            project_slug = request.data.get('project', None)
+        else:
+            project_slug = request.query_params.get('project', None)
+        if project_slug:
+            try:
+                project = Project.objects.get(slug=project_slug)
+            except Project.DoesNotExist:
+                return None
+        else:
+            return None
+        return project
 
 
 class CanEmailFollowers(permissions.BasePermission):

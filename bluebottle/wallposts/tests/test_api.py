@@ -295,9 +295,10 @@ class WallpostReactionApiIntegrationTest(BluebottleTestCase):
 
         # Test that a reaction update from a user who is not the author is
         # forbidden.
-        response = self.client.post(second_reaction_detail_url,
-                                    {'text': 'Can I update this reaction?'},
-                                    token=self.another_token)
+        response = self.client.put(second_reaction_detail_url,
+                                   {'text': 'Can I update this reaction?'},
+                                   token=self.another_token)
+
         self.assertEqual(
             response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED,
             response.data)

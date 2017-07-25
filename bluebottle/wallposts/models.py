@@ -27,6 +27,18 @@ GROUP_PERMS = {
             'add_mediawallpostphoto', 'change_mediawallpostphoto',
             'delete_mediawallpostphoto',
         )
+    },
+    'Anonymous': {
+        'perms': ('api_read_wallpost', 'api_read_mediawallpost', 'api_read_systemwallpost',
+                  'api_read_textwallpost',
+                  'api_read_reaction',)
+    },
+    'Authenticated': {
+        'perms': ('api_read_wallpost', 'api_add_wallpost', 'api_change_wallpost',
+                  'api_read_textwallpost', 'api_add_textwallpost', 'api_change_textwallpost',
+                  'api_read_mediawallpost', 'api_add_mediawallpost', 'api_change_mediawallpost',
+                  'api_read_systemwallpost',
+                  'api_read_reaction', 'api_add_reaction', 'api_change_reaction',)
     }
 }
 
@@ -115,6 +127,15 @@ class Wallpost(PolymorphicModel):
     class Meta:
         ordering = ('created',)
         base_manager_name = 'objects_with_deleted'
+        permissions = (
+            ('api_read_wallpost', 'Can view wallposts through the API'),
+            ('api_add_wallpost', 'Can add wallposts through the API'),
+            ('api_change_wallpost', 'Can change wallposts through the API'),
+            ('api_delete_wallpost', 'Can delete wallposts through the API'),
+            ('api_add_reaction', 'Can add wallpost reactions through the API'),
+            ('api_read_reaction', 'Can read wallpost reactions through the API'),
+            ('api_change_reaction', 'Can change wallpost reactions through the API'),
+        )
 
     def __unicode__(self):
         return str(self.id)
@@ -135,6 +156,14 @@ class MediaWallpost(Wallpost):
     def __unicode__(self):
         return Truncator(self.text).words(10)
 
+    class Meta(Wallpost.Meta):
+        permissions = (
+            ('api_read_mediawallpost', 'Can view media wallposts through the API'),
+            ('api_add_mediawallpost', 'Can add media wallposts through the API'),
+            ('api_change_mediawallpost', 'Can change media wallposts through the API'),
+            ('api_delete_mediawallpost', 'Can delete media wallposts through the API'),
+        )
+
 
 class MediaWallpostPhoto(models.Model):
     mediawallpost = models.ForeignKey(MediaWallpost, related_name='photos',
@@ -153,6 +182,14 @@ class MediaWallpostPhoto(models.Model):
                                help_text=_(
                                    "The last user to edit this wallpost photo."))
 
+    @property
+    def owner(self):
+        return self.mediawallpost.author
+
+    @property
+    def parent(self):
+        return self.mediawallpost
+
 
 class TextWallpost(Wallpost):
     # The content of the wall post.
@@ -161,6 +198,14 @@ class TextWallpost(Wallpost):
         return 'text'
 
     text = models.TextField(max_length=WALLPOST_REACTION_MAX_LENGTH)
+
+    class Meta(Wallpost.Meta):
+        permissions = (
+            ('api_read_textwallpost', 'Can view text wallposts through the API'),
+            ('api_add_textwallpost', 'Can add text wallposts through the API'),
+            ('api_change_textwallpost', 'Can change text wallposts through the API'),
+            ('api_delete_textwallpost', 'Can delete text wallposts through the API'),
+        )
 
     def __unicode__(self):
         return Truncator(self.text).words(10)
@@ -179,6 +224,14 @@ class SystemWallpost(Wallpost):
                                      verbose_name=_('related type'))
     related_id = models.PositiveIntegerField(_('related ID'))
     related_object = fields.GenericForeignKey('related_type', 'related_id')
+
+    class Meta(Wallpost.Meta):
+        permissions = (
+            ('api_read_systemwallpost', 'Can view system wallposts through the API'),
+            ('api_add_systemwallpost', 'Can add system wallposts through the API'),
+            ('api_change_systemwallpost', 'Can change system wallposts through the API'),
+            ('api_delete_systemwallpost', 'Can delete system wallposts through the API'),
+        )
 
     def __unicode__(self):
         return Truncator(self.text).words(10)
@@ -215,6 +268,14 @@ class Reaction(models.Model):
     # Manager
     objects = ReactionManager()
     objects_with_deleted = models.Manager()
+
+    @property
+    def owner(self):
+        return self.author
+
+    @property
+    def parent(self):
+        return self.wallpost
 
     class Analytics:
         type = 'wallpost'
