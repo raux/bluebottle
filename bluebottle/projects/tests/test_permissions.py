@@ -48,3 +48,6 @@ class ProjectPermissionsTestCase(BluebottleTestCase):
         self.assertEqual(
             response.data['related_permissions']['rewards']['GET'], True
         )
+        self.assertEqual(
+            response.data['related_permissions']['donations']['GET'], True
+        )

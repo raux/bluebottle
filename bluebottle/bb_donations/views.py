@@ -15,6 +15,7 @@ from bluebottle.fundraisers.models import Fundraiser
 from bluebottle.projects.models import Project
 from bluebottle.donations.models import Donation
 from bluebottle.utils.utils import StatusDefinition
+from bluebottle.utils.views import (ListAPIView)
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class DonationDetail(ValidDonationsMixin, generics.RetrieveAPIView):
         return PreviewDonationWithoutAmountSerializer
 
 
-class ProjectDonationList(ValidDonationsMixin, generics.ListAPIView):
+class ProjectDonationList(ValidDonationsMixin, ListAPIView):
     queryset = Donation.objects.all()
     pagination_class = DonationPagination
 

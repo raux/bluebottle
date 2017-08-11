@@ -21,6 +21,21 @@ class RelatedProjectOwnerPermission(RelatedResourceOwnerPermission):
         return parent
 
 
+class RelatedProjectOwnerOrReadOnlyPermission(RelatedProjectOwnerPermission):
+    def has_object_method_permission(self, method, user, view, obj):
+        if method in permissions.SAFE_METHODS:
+            return True
+
+        return super(RelatedProjectOwnerOrReadOnlyPermission, self).has_object_method_permission(method, user, view,
+                                                                                                 obj)
+
+    def has_method_permission(self, method, user, view):
+        if method in permissions.SAFE_METHODS:
+            return True
+
+        return super(RelatedProjectOwnerOrReadOnlyPermission, self).has_method_permission(method, user, view)
+
+
 class IsEditableOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         return self.has_object_method_permission(request.method, None, view, obj)

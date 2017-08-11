@@ -226,9 +226,11 @@ class ProjectPermissionsSerializer(serializers.Serializer):
         return obj
 
     rewards = RelatedPermissionField('reward-list', data_mappings={'project': 'slug'})
+    donations = RelatedPermissionField('project-donation-list', data_mappings={'project': 'slug'})
+    # tasks = RelatedPermissionField('task-list', data_mappings={'project': 'slug'})
 
     class Meta:
-        fields = ('rewards', )
+        fields = ('rewards', 'donations', )
 
 
 class ManageProjectSerializer(serializers.ModelSerializer):
