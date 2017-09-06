@@ -428,7 +428,7 @@ class ProjectAdmin(AdminImageMixin, ImprovedModelForm):
                            'is_campaign', 'celebrate_results']}
 
         if request.user.has_perm('projects.approve_payout'):
-            main['fields'].insert(3, 'payout_status')
+            main['fields'].insert(6, 'payout_status')
 
         return (
             (_('Main'), main),

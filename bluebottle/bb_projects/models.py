@@ -121,7 +121,7 @@ class BaseProject(models.Model, GetTweetMixin):
     """ The base Project model. """
     owner = models.ForeignKey(
         'members.Member', verbose_name=_('initiator'),
-        help_text=_('Project owner'), related_name='owner')
+        help_text=_('Project Initiator'), related_name='owner')
 
     reviewer = models.ForeignKey(
         'members.Member', verbose_name=_('reviewer'),
@@ -143,8 +143,8 @@ class BaseProject(models.Model, GetTweetMixin):
 
     organization = models.ForeignKey(
         'organizations.Organization', verbose_name=_(
-            'organization'),
-        help_text=_('Project organization'),
+            'Organization'),
+        help_text=_('Partner Organization'),
         related_name='projects', null=True, blank=True)
 
     project_type = models.CharField(_('Project type'), max_length=50,
