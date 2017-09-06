@@ -21,7 +21,7 @@ from bluebottle.utils.views import (
     PrivateFileView, ListAPIView, ListCreateAPIView,
     RetrieveUpdateDestroyAPIView, RetrieveUpdateAPIView, OwnerListViewMixin,
 )
-from bluebottle.bb_tasks.permissions import (
+from bluebottle.tasks.permissions import (
     ActiveProjectOrReadOnlyPermission,
     ResumePermission
 )

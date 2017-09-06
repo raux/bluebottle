@@ -37,7 +37,7 @@ class TaskMemberMailSender:
 class TaskMemberAppliedMail(TaskMemberMailSender):
     def __init__(self, instance, *args, **kwargs):
         TaskMemberMailSender.__init__(self, instance, *args, **kwargs)
-        self.template_mail = 'task_member_applied.mail'
+        self.template_mail = 'tasks/mails/task_member_applied.mail'
         self.receiver = self.task.author
 
         with TenantLanguage(self.task_member.member.primary_language):
@@ -55,7 +55,7 @@ class TaskMemberRejectMail(TaskMemberMailSender):
     def __init__(self, instance, *args, **kwargs):
         TaskMemberMailSender.__init__(self, instance, *args, **kwargs)
 
-        self.template_mail = 'task_member_rejected.mail'
+        self.template_mail = 'tasks/mails/task_member_rejected.mail'
         self.receiver = self.task_member.member
 
         with TenantLanguage(self.receiver.primary_language):
@@ -73,7 +73,7 @@ class TaskMemberAcceptedMail(TaskMemberMailSender):
     def __init__(self, instance, *args, **kwargs):
         TaskMemberMailSender.__init__(self, instance, *args, **kwargs)
 
-        self.template_mail = 'task_member_accepted.mail'
+        self.template_mail = 'tasks/mails/task_member_accepted.mail'
         self.receiver = self.task_member.member
 
         with TenantLanguage(self.receiver.primary_language):
@@ -90,7 +90,7 @@ class TaskMemberRealizedMail(TaskMemberMailSender):
     def __init__(self, instance, *args, **kwargs):
         TaskMemberMailSender.__init__(self, instance, *args, **kwargs)
 
-        self.template_mail = 'task_member_realized.mail'
+        self.template_mail = 'tasks/mails/task_member_realized.mail'
         self.receiver = self.task_member.member
 
         with TenantLanguage(self.receiver.primary_language):
@@ -111,7 +111,7 @@ class TaskMemberWithdrawMail(TaskMemberMailSender):
     def __init__(self, instance, *args, **kwargs):
         TaskMemberMailSender.__init__(self, instance, *args, **kwargs)
 
-        self.template_mail = 'task_member_withdrew.mail'
+        self.template_mail = 'tasks/mails/task_member_withdrew.mail'
         self.receiver = self.task.author
 
         with TenantLanguage(self.receiver.primary_language):

@@ -43,7 +43,7 @@ FLUENT_DASHBOARD_APP_GROUPS = (
     (_('Tasks'), {
         'models': (
             'bluebottle.tasks.*',
-            'bluebottle.bb_tasks.*',
+            'bluebottle.tasks.*',
         ),
         'module': 'fluent_dashboard.modules.AppIconList',
         'collapsible': False,
