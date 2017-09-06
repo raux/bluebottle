@@ -104,7 +104,7 @@ class BaseOrder(models.Model, FSMTransition):
         total = [Money(data['amount__sum'], data['amount_currency']) for data in donations]
         if len(total) > 1:
             raise ValueError('Multiple currencies in one order')
-        self.total = total[0]
+        self.total = total[0] if total else self.total
         if save:
             self.save()
 
