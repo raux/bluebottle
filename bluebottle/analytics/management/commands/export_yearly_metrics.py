@@ -399,6 +399,13 @@ class Command(BaseCommand):
                                          q2=metrics['q2'],
                                          q3=metrics['q3'],
                                          q4=metrics['q4']))
+    @staticmethod
+    def get_country_name(location):
+        if location.country:
+            return location.country.name
+        else:
+            return '-'
+
 
     def generate_segmented_data(self):
 
@@ -456,7 +463,8 @@ class Command(BaseCommand):
                                                         status='realized')
 
                 for task_member in realized_task_members:
-                    locations[u'{}__{}'.format(task_member.project.location.country.name, task_member.project.location.city)].add(task_member.id)
+                    locations[u'{}__{}'.format(self.get_country_name(task_member.project.location),
+                                               task_member.project.location.city)].add(task_member.id)
 
                 for location, members in locations.iteritems():
                     country, city = location.split('__')
@@ -474,7 +482,9 @@ class Command(BaseCommand):
 
                 total_realized_hours_by_location = defaultdict(int)
                 for task_member in realized_task_members:
-                    total_realized_hours_by_location[u'{}__{}'.format(task_member.project.location.country.name, task_member.project.location.city)] += task_member.time_spent
+                    total_realized_hours_by_location[u'{}__{}'
+                        .format(self.get_country_name(task_member.project.location),
+                                task_member.project.location.city)] += task_member.time_spent
 
                 for location, total in total_realized_hours_by_location.iteritems():
                     country, city = location.split('__')
@@ -495,12 +505,12 @@ class Command(BaseCommand):
                                                                     'done-incomplete'])
 
                 for project in projects:
-                    location_members[u'{}__{}'.format(project.location.country.name, project.location.city)].append(project.owner.id)
+                    location_members[u'{}__{}'.format(self.get_country_name(project.location), project.location.city)].append(project.owner.id)
 
                     task_members = TaskMember.objects.filter(task__project=project)
 
                     for task_member in task_members:
-                        location_members[u'{}__{}'.format(project.location.country.name, project.location.city)].append(task_member.id)
+                        location_members[u'{}__{}'.format(self.get_country_name(project.location), project.location.city)].append(task_member.id)
 
                 for location, members in location_members.iteritems():
                     country, city = location.split('__')
