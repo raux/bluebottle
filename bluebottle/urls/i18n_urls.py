@@ -24,6 +24,7 @@ urlpatterns = [
         name='password_reset_confirm'),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^admin/exportdb/', include('exportdb.urls')),
+    url(r'^admin/analytics/', include('bluebottle.analytics.urls')),
     url(r'^admin/', include(admin.site.urls)),
 
     url(r'^admin/utils/tinymce/', include('tinymce.urls')),
@@ -32,6 +33,8 @@ urlpatterns = [
     # account login/logout, password reset, and password change
     url(r'^accounts/',
         include('django.contrib.auth.urls', namespace='accounts')),
+
+    url(r'^admin/summernote/', include('django_summernote.urls')),
 
     url(r'^admin', RedirectView.as_view(url=reverse_lazy('admin:index')), name='admin-slash'),
 

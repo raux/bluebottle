@@ -7,7 +7,6 @@ from django.utils.timezone import now
 
 from django_extensions.db.fields import (ModificationDateTimeField,
                                          CreationDateTimeField)
-from localflavor.generic.models import BICField
 from djchoices.choices import DjangoChoices, ChoiceItem
 from sorl.thumbnail import ImageField
 
@@ -27,11 +26,6 @@ class ProjectTheme(models.Model):
     description = models.TextField(_('description'), blank=True)
     disabled = models.BooleanField(_('disabled'), default=False)
 
-    class Meta:
-        ordering = ['name']
-        verbose_name = _('project theme')
-        verbose_name_plural = _('project themes')
-
     def __unicode__(self):
         return self.name
 
@@ -40,6 +34,14 @@ class ProjectTheme(models.Model):
             self.slug = slugify(self.name)
 
         super(ProjectTheme, self).save(**kwargs)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = _('project theme')
+        verbose_name_plural = _('project themes')
+        permissions = (
+            ('api_read_projecttheme', 'Can view project theme through API'),
+        )
 
 
 class ProjectPhase(models.Model):
@@ -70,6 +72,9 @@ class ProjectPhase(models.Model):
 
     class Meta():
         ordering = ['sequence']
+        permissions = (
+            ('api_read_projectphase', 'Can view project phase through API'),
+        )
 
     def __unicode__(self):
         return u'{0} - {1}'.format(self.sequence, _(self.name))
@@ -124,6 +129,18 @@ class BaseProject(models.Model, GetTweetMixin):
         null=True, blank=True
     )
 
+    task_manager = models.ForeignKey(
+        'members.Member', verbose_name=_('task manager'),
+        help_text=_('Project Task Manager'), related_name='task_manager',
+        null=True, blank=True
+    )
+
+    promoter = models.ForeignKey(
+        'members.Member', verbose_name=_('promoter'),
+        help_text=_('Project Promoter'), related_name='promoter',
+        null=True, blank=True
+    )
+
     organization = models.ForeignKey(
         'organizations.Organization', verbose_name=_(
             'organization'),
@@ -136,7 +153,7 @@ class BaseProject(models.Model, GetTweetMixin):
     # Basics
     created = models.DateTimeField(_('created'), help_text=_('When this project was created.'), auto_now_add=True)
     updated = models.DateTimeField(_('updated'), auto_now=True)
-    title = models.CharField(_('title'), max_length=255, unique=True)
+    title = models.CharField(_('title'), max_length=255, unique=True, db_index=True)
     slug = models.SlugField(_('slug'), max_length=100, unique=True)
     pitch = models.TextField(
         _('pitch'), help_text=_('Pitch your smart idea in one sentence'),
@@ -150,7 +167,7 @@ class BaseProject(models.Model, GetTweetMixin):
 
     location = models.ForeignKey('geo.Location', null=True, blank=True)
     place = models.CharField(help_text=_('Geographical location'),
-                             max_length=100, null=True, blank=True)
+                             max_length=200, null=True, blank=True)
 
     # Extended Description
     description = models.TextField(_('why, what and how'), help_text=_(
@@ -189,7 +206,7 @@ class BaseProject(models.Model, GetTweetMixin):
     # Bank details
     account_number = models.CharField(_("Account number"), max_length=255,
                                       null=True, blank=True)
-    account_bic = BICField(_("account SWIFT-BIC"), null=True, blank=True)
+    account_details = models.CharField(_("account details"), max_length=500, null=True, blank=True)
     account_bank_country = models.ForeignKey(
         'geo.Country', blank=True, null=True,
         related_name="project_account_bank_country")
@@ -235,6 +252,14 @@ class BaseProject(models.Model, GetTweetMixin):
         ).aggregate(total=Count('members'), externals=Sum('members__externals'))
 
         return requested - counts['total'] + (counts['externals'] or 0)
+
+    @property
+    def account_bic(self):
+        return self.account_details
+
+    @account_bic.setter
+    def account_bic(self, value):
+        self.account_details = value
 
     _initial_status = None
 

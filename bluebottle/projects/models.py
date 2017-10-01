@@ -1,13 +1,13 @@
-from dateutil import parser
 import datetime
 import logging
 
 import pytz
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models import Q, F
+from django.db.models import Q
 from django.db.models.aggregates import Count, Sum
 from django.db.models.signals import post_init, post_save, pre_save
 from django.dispatch import receiver
@@ -18,6 +18,8 @@ from django.utils.http import urlquote
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django_extensions.db.fields import ModificationDateTimeField, CreationDateTimeField
+
+from django_summernote.models import AbstractAttachment
 from moneyed.classes import Money
 from select_multiple_field.models import SelectMultipleField
 
@@ -34,7 +36,7 @@ from bluebottle.utils.fields import MoneyField, get_currency_choices, get_defaul
 from bluebottle.utils.managers import UpdateSignalsQuerySet
 from bluebottle.utils.utils import StatusDefinition, PreviousStatusMixin
 from bluebottle.wallposts.models import (
-    MediaWallpostPhoto, MediaWallpost, TextWallpost
+    Wallpost, MediaWallpostPhoto, MediaWallpost, TextWallpost
 )
 from .mails import (
     mail_project_funded_internal, mail_project_complete,
@@ -42,15 +44,6 @@ from .mails import (
 )
 from .signals import project_funded
 
-GROUP_PERMS = {
-    'Staff': {
-        'perms': (
-            'add_project', 'change_project', 'delete_project',
-            'add_projectdocument', 'change_projectdocument', 'delete_projectdocument',
-            'add_projectbudgetline', 'change_projectbudgetline', 'delete_projectbudgetline',
-        )
-    }
-}
 
 logger = logging.getLogger(__name__)
 
@@ -89,112 +82,6 @@ class ProjectPhaseLog(models.Model):
             return obj.start
 
 
-class ProjectManager(models.Manager):
-    def get_queryset(self):
-        return UpdateSignalsQuerySet(self.model, using=self._db)
-
-    def search(self, query):
-        qs = super(ProjectManager, self).get_queryset()
-
-        # Apply filters
-        status = query.getlist(u'status[]', None)
-        if status:
-            qs = qs.filter(status__slug__in=status)
-        else:
-            status = query.get('status', None)
-            if status:
-                qs = qs.filter(status__slug=status)
-
-        country = query.get('country', None)
-        if country:
-            qs = qs.filter(country=country)
-
-        location = query.get('location', None)
-        if location:
-            qs = qs.filter(location=location)
-
-        category = query.get('category', None)
-        if category:
-            qs = qs.filter(categories__slug=category)
-
-        theme = query.get('theme', None)
-        if theme:
-            qs = qs.filter(theme_id=theme)
-
-        money_needed = query.get('money_needed', None)
-        if money_needed:
-            qs = qs.filter(amount_needed__gt=0)
-
-        skill = query.get('skill', None)
-        if skill:
-            qs.select_related('task')
-            qs = qs.filter(task__skill=skill).distinct()
-
-        anywhere = query.get('anywhere', None)
-        if anywhere:
-            qs = qs.filter(task__id__isnull=False, task__location__isnull=True).distinct()
-
-        start = query.get('start', None)
-        if start:
-            qs.select_related('task')
-
-            tz = timezone.get_current_timezone()
-            start_date = tz.localize(
-                datetime.datetime.combine(parser.parse(start), datetime.datetime.min.time())
-            )
-
-            end = query.get('end', start)
-            end_date = tz.localize(
-                datetime.datetime.combine(parser.parse(end), datetime.datetime.max.time())
-            )
-
-            qs = qs.filter(
-                Q(task__type='event', task__deadline__range=[start_date, end_date]) |
-                Q(task__type='ongoing', task__deadline__gte=start_date)
-            ).distinct()
-
-        project_type = query.get('project_type', None)
-        if project_type == 'volunteering':
-            qs = qs.annotate(Count('task')).filter(task__count__gt=0)
-        elif project_type == 'funding':
-            qs = qs.filter(amount_asked__gt=0)
-        elif project_type == 'voting':
-            qs = qs.filter(status__slug__in=['voting', 'voting-done'])
-
-        text = query.get('text', None)
-        if text:
-            qs = qs.filter(Q(title__icontains=text) |
-                           Q(location__name__icontains=text) |
-                           Q(pitch__icontains=text) |
-                           Q(description__icontains=text))
-
-        return self._ordering(query.get('ordering', None), qs, status)
-
-    def _ordering(self, ordering, queryset, status):
-        if ordering == 'deadline':
-            queryset = queryset.order_by('status', 'deadline', 'id')
-        elif ordering == 'amount_needed':
-            # Add the percentage that is still needed to the query and sort on that.
-            # This way we do not have to take currencies into account
-            queryset = queryset.annotate(percentage_needed=F('amount_needed') / (F('amount_asked') + 1))
-            queryset = queryset.order_by('status', 'percentage_needed', 'id')
-            queryset = queryset.filter(amount_needed__gt=0)
-        elif ordering == 'newest':
-            queryset = queryset.extra(
-                select={'has_campaign_started': 'campaign_started is null'})
-            queryset = queryset.order_by('status', 'has_campaign_started',
-                                         '-campaign_started', '-created', 'id')
-        elif ordering == 'popularity':
-            queryset = queryset.order_by('status', '-popularity', 'id')
-            if status == 5:
-                queryset = queryset.filter(amount_needed__gt=0)
-
-        elif ordering:
-            queryset = queryset.order_by('status', ordering)
-
-        return queryset
-
-
 class ProjectDocument(BaseProjectDocument):
     @property
     def document_url(self):
@@ -203,6 +90,14 @@ class ProjectDocument(BaseProjectDocument):
         if self.pk is not None:
             return reverse('project-document-file', kwargs={'pk': self.pk})
         return None
+
+    @property
+    def owner(self):
+        return self.project.owner
+
+    @property
+    def parent(self):
+        return self.project
 
 
 class Project(BaseProject, PreviousStatusMixin):
@@ -232,7 +127,7 @@ class Project(BaseProject, PreviousStatusMixin):
 
     allow_overfunding = models.BooleanField(default=True)
     story = models.TextField(
-        _("story"), help_text=_("This is the help text for the story field"),
+        _("story"), help_text=_("Describe the project in detail"),
         blank=True, null=True)
 
     # TODO: Remove these fields?
@@ -285,12 +180,12 @@ class Project(BaseProject, PreviousStatusMixin):
 
     payout_status = models.CharField(max_length=50, null=True, blank=True,
                                      choices=PAYOUT_STATUS_CHOICES)
-
-    objects = ProjectManager()
+    wallposts = GenericRelation(Wallpost, related_query_name='project_wallposts')
+    objects = UpdateSignalsQuerySet.as_manager()
 
     def __unicode__(self):
         if self.title:
-            return self.title
+            return u'{}'.format(self.title)
         return self.slug
 
     @classmethod
@@ -446,6 +341,12 @@ class Project(BaseProject, PreviousStatusMixin):
 
         if self.payout_status == 're_scheduled' and self.campaign_paid_out:
             self.campaign_paid_out = None
+
+        if not self.task_manager:
+            self.task_manager = self.owner
+
+        # Set all task.author to project.task_manager
+        self.task_set.exclude(author=self.task_manager).update(author=self.task_manager)
 
         super(Project, self).save(*args, **kwargs)
 
@@ -632,7 +533,7 @@ class Project(BaseProject, PreviousStatusMixin):
                                       StatusDefinition.SUCCESS]). \
             filter(anonymous=False). \
             filter(order__user__isnull=False). \
-            order_by('order__user', '-created').distinct('order__user')[:limit]
+            order_by('order__user', 'name', '-created').distinct('order__user', 'name')[:limit]
 
     @property
     def task_members(self, limit=20):
@@ -686,7 +587,39 @@ class Project(BaseProject, PreviousStatusMixin):
         return tweet
 
     class Meta(BaseProject.Meta):
-        permissions = (('approve_payout', 'Can approve payouts for projects'), )
+        permissions = (
+            ('approve_payout', 'Can approve payouts for projects'),
+            ('api_read_project', 'Can view projects through the API'),
+            ('api_add_project', 'Can add projects through the API'),
+            ('api_change_project', 'Can change projects through the API'),
+            ('api_delete_project', 'Can delete projects through the API'),
+
+            ('api_read_own_project', 'Can view own projects through the API'),
+            ('api_add_own_project', 'Can add own projects through the API'),
+            ('api_change_own_project', 'Can change own projects through the API'),
+            ('api_delete_own_project', 'Can delete own projects through the API'),
+
+            ('api_read_projectdocument', 'Can view project documents through the API'),
+            ('api_add_projectdocument', 'Can add project documents through the API'),
+            ('api_change_projectdocument', 'Can change project documents through the API'),
+            ('api_delete_projectdocument', 'Can delete project documents through the API'),
+
+            ('api_read_own_projectdocument', 'Can view project own documents through the API'),
+            ('api_add_own_projectdocument', 'Can add own project documents through the API'),
+            ('api_change_own_projectdocument', 'Can change own project documents through the API'),
+            ('api_delete_own_projectdocument', 'Can delete own project documents through the API'),
+
+            ('api_read_projectbudgetline', 'Can view project budget lines through the API'),
+            ('api_add_projectbudgetline', 'Can add project budget lines through the API'),
+            ('api_change_projectbudgetline', 'Can change project budget lines through the API'),
+            ('api_delete_projectbudgetline', 'Can delete project budget lines through the API'),
+
+            ('api_read_own_projectbudgetline', 'Can view own project budget lines through the API'),
+            ('api_add_own_projectbudgetline', 'Can add own project budget lines through the API'),
+            ('api_change_own_projectbudgetline', 'Can change own project budget lines through the API'),
+            ('api_delete_own_projectbudgetline', 'Can delete own project budget lines through the API'),
+
+        )
         ordering = ['title']
 
     def status_changed(self, old_status, new_status):
@@ -764,12 +697,55 @@ class ProjectBudgetLine(models.Model):
     created = CreationDateTimeField()
     updated = ModificationDateTimeField()
 
+    @property
+    def owner(self):
+        return self.project.owner
+
+    @property
+    def parent(self):
+        return self.project
+
     class Meta:
         verbose_name = _('budget line')
         verbose_name_plural = _('budget lines')
 
     def __unicode__(self):
         return u'{0} - {1}'.format(self.description, self.amount)
+
+
+class ProjectImage(AbstractAttachment):
+    """
+    Project Image: Image that is directly associated with the project.
+
+    Can for example be used in project descriptions
+
+    """
+    project = models.ForeignKey('projects.Project')
+
+    class Meta:
+        verbose_name = _('project image')
+        verbose_name_plural = _('project images')
+        permissions = (
+            ('api_read_projectimage', 'Can view project imagesthrough the API'),
+            ('api_add_projectimage', 'Can add project images through the API'),
+            ('api_change_projectimage', 'Can change project images through the API'),
+            ('api_delete_projectimage', 'Can delete project images through the API'),
+
+            ('api_read_own_projectimage', 'Can view own project images through the API'),
+            ('api_add_own_projectimage', 'Can add own project images through the API'),
+            ('api_change_own_projectimage', 'Can change own project images through the API'),
+            ('api_delete_own_projectimage', 'Can delete own project images through the API'),
+        )
+
+    @property
+    def parent(self):
+        return self.project
+
+    def save(self, project_id=None, *args, **kwargs):
+        if project_id:
+            self.project_id = int(project_id[0])
+
+        super(ProjectImage, self).save(*args, **kwargs)
 
 
 @receiver(project_funded, weak=False, sender=Project,
