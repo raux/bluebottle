@@ -100,6 +100,52 @@ def get_currencies():
     return currencies
 
 
+def get_user_site_links(user):
+    from bluebottle.cms.models import SiteLinks, Link
+
+    site_links = SiteLinks.objects.first()
+    response = {
+        'hasCopyright': site_links.has_copyright
+    }
+
+    for link in site_links.links.all():
+        allowed = True
+        if link.link_permissions.count() > 0:
+            # Check permissions
+            for perm in link.link_permissions.all():
+                # has_perm  present allowed
+                # yes       yes     yes
+                # yes       no      no
+                # no        yes     no
+                # no        no      yes
+                allowed = (user.has_perm(perm.permission) == perm.present) and allowed
+
+        if not allowed:
+            continue
+
+        try:
+            if link.group not in response:
+                response[link.group] = []
+
+            link_data = {
+                'title': link.title,
+                'isHighlighted': link.highlight
+            }
+
+            if link.component:
+                link_data['route'] = link.component
+                link_data['param'] = link.component_id
+            elif link.external_link:
+                link_data['route'] = link.external_link
+                link_data['external'] = True
+
+            response[link.group].append(link_data)
+        except Link.DoesNotExist:
+            pass
+
+    return response
+
+
 def get_public_properties(request):
     """
 
@@ -148,7 +194,73 @@ def get_public_properties(request):
             'recurringDonationsEnabled': getattr(properties, 'RECURRING_DONATIONS_ENABLED', False),
             'siteName': current_tenant.name,
             'languages': [{'code': lang[0], 'name': lang[1]} for lang in getattr(properties, 'LANGUAGES')],
-            'languageCode': get_language()
+            'languageCode': get_language(),
+            'siteLinks': get_user_site_links(request.user),
+            'siteLinksSample': {
+                'main': [
+                    {
+                        'title': "Start a project",
+                        'route': "start-project",
+                        'isHighlighted': True
+                    },
+                    {
+                        'title': "Results",
+                        'route': "results-page",
+                        'param': 2,
+                        'permissions': {
+                            'homepage': {
+                                'GET': True
+                            },
+                        }
+                    }
+                ],
+                'about': [
+                    {
+                        'title': "About us",
+                        'param': "story",
+                        'route': "page"
+                    },
+                    {
+                        'title': "News",
+                        'route': "news"
+                    }
+                ],
+                'info': [
+                    {
+                        'title': "Support",
+                        'route': "http://support.onepercentclub.com/",
+                        'external': True
+                    },
+                    {
+                        'title': "ANBI",
+                        'locale': 'nl',
+                        'param': "organisatie",
+                        'route': "page"
+                    }
+                ],
+                'discover': [
+                    {
+                        'title': "Start a project",
+                        'route': "start-project"
+                    },
+                ],
+                'social': [
+                    {
+                        'title': "Facebook",
+                        'route': "https://facebook.com/onepercentclub",
+                        'external': True,
+                        'name': "social-facebook"
+                    },
+                    {
+                        'title': "Twitter",
+                        'locale': 'en',
+                        'route': "https://twitter.com/1percentclub",
+                        'external': True,
+                        'name': "social-twitter"
+                    },
+                ],
+                'footerCopyrightLink': True
+            }
         }
         try:
             config['readOnlyFields'] = {
