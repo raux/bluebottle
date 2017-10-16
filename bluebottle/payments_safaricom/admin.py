@@ -1,15 +1,15 @@
 from polymorphic.admin import PolymorphicChildModelAdmin
 
 from bluebottle.payments.models import Payment
-from .models import TelesomPayment
+from .models import SafaricomPayment
 
 
-class TelesomPaymentAdmin(PolymorphicChildModelAdmin):
+class SafaricomPaymentAdmin(PolymorphicChildModelAdmin):
     base_model = Payment
-    model = TelesomPayment
-    search_fields = ['mobile', 'transaction_reference']
+    model = SafaricomPayment
+    search_fields = ['party_a', 'transaction_reference']
     raw_id_fields = ('order_payment', )
-    readonly_fields = ('amount', 'currency', 'mobile',
-                       'description',
-                       'transaction_reference',
+    readonly_fields = ('amount', 'business_short_code',
+                       'party_a', 'party_b', 'phone_number',
+                       'account_reference', 'call_back_url',
                        'response', 'update_response')

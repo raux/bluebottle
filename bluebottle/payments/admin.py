@@ -17,6 +17,7 @@ from bluebottle.payments_docdata.admin import (
     DocdataDirectdebitPaymentAdmin)
 from bluebottle.payments_lipisha.admin import LipishaPaymentAdmin
 from bluebottle.payments_logger.admin import PaymentLogEntryInline
+from bluebottle.payments_safaricom.admin import SafaricomPaymentAdmin
 from bluebottle.payments_telesom.admin import TelesomPaymentAdmin
 from bluebottle.payments_vitepay.admin import VitepayPaymentAdmin
 from bluebottle.payments_voucher.admin import VoucherPaymentAdmin
@@ -119,6 +120,7 @@ class PaymentAdmin(PolymorphicParentModelAdmin):
                 DocdataPaymentAdmin, DocdataDirectdebitPaymentAdmin,
                 VoucherPaymentAdmin, InterswitchPaymentAdmin,
                 FlutterwavePaymentAdmin, FlutterwaveMpesaPaymentAdmin,
+                SafaricomPaymentAdmin,
                 LipishaPaymentAdmin, TelesomPaymentAdmin, VitepayPaymentAdmin,
                 ExternalPaymentAdmin
             )

@@ -343,6 +343,7 @@ TENANT_APPS = (
     'bluebottle.payments_lipisha',
     'bluebottle.payments_logger',
     'bluebottle.payments_pledge',
+    'bluebottle.payments_safaricom',
     'bluebottle.payments_telesom',
     'bluebottle.payments_vitepay',
     'bluebottle.payments_voucher',
