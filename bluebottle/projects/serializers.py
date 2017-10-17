@@ -292,6 +292,30 @@ class ManageProjectSerializer(serializers.ModelSerializer):
                 iban_validator(value)
         return value
 
+    def validate_deadline(self, value):
+        """
+        Only use the submitted deadline if project is plan-new or plan-needs-work
+        """
+        try:
+            project = Project.objects.get(slug=self.initial_data['slug'])
+        except Project.DoesNotExist:
+            return value
+        if project.status.slug in ['plan-new', 'plan-needs-work']:
+            return value
+        return project.deadline
+
+    def validate_amount_needed(self, value):
+        """
+        Only use the submitted amount_needed if project is plan-new or plan-needs-work
+        """
+        try:
+            project = Project.objects.get(slug=self.initial_data['slug'])
+        except Project.DoesNotExist:
+            return value
+        if project.status.slug in ['plan-new', 'plan-needs-work']:
+            return value
+        return project.amount_needed
+
     def validate_status(self, value):
         if not value:
             value = ProjectPhase.objects.order_by('sequence').all()[0]
@@ -321,8 +345,7 @@ class ManageProjectSerializer(serializers.ModelSerializer):
             try:
                 current_status = Project.objects.get(slug=self.initial_data['slug']).status
             except (Project.DoesNotExist, KeyError):
-                current_status = ProjectPhase.objects.order_by(
-                    'sequence').all()[0]
+                current_status = ProjectPhase.objects.order_by('sequence').all()[0]
 
             if current_status and proposed_status:
                 """

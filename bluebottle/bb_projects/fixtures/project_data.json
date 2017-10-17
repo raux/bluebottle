@@ -46,7 +46,7 @@
             "name": "Voting - Running",
             "slug": "voting",
             "sequence": 4,
-            "editable": false,
+            "editable": true,
             "active": true,
             "description": ""
         }
@@ -72,7 +72,7 @@
             "slug": "campaign",
             "name": "Project - Running",
             "sequence": 6,
-            "editable": false,
+            "editable": true,
             "active": true,
             "description": ""
         }
@@ -85,7 +85,7 @@
             "slug": "to-be-continued",
             "name": "Project - To be continued",
             "sequence": 7,
-            "editable": false,
+            "editable": true,
             "active": true,
             "description": ""
         }
@@ -111,7 +111,7 @@
             "name": "Project - Done",
             "slug": "done-incomplete",
             "sequence": 9,
-            "editable": false,
+            "editable": true,
             "active": true,
             "description": ""
         }
