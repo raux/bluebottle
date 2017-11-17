@@ -159,6 +159,32 @@ class OnlineOnLocationFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ProjectLocationFilter(admin.SimpleListFilter):
+    title = _('Project location')
+    parameter_name = 'project__location'
+
+    def lookups(self, request, model_admin):
+        locations = [obj.project.location for obj in model_admin.model.objects.order_by(
+            'project__location__name').distinct('project__location__name').exclude(
+            project__location__isnull=True).all()]
+        lookups = [(loc.id, loc.name) for loc in locations]
+
+        try:
+            lookups.insert(
+                0, (request.user.location.id, _('My location ({})').format(request.user.location))
+            )
+        except AttributeError:
+            pass
+
+        return lookups
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(project__location__id__exact=self.value())
+        else:
+            return queryset
+
+
 class TaskAdmin(admin.ModelAdmin):
     date_hierarchy = 'created'
 
@@ -170,7 +196,7 @@ class TaskAdmin(admin.ModelAdmin):
                    ('skill', admin.RelatedOnlyFieldListFilter),
                    'deadline', ('deadline', DateRangeFilter),
                    DeadlineToAppliedFilter, ('deadline_to_apply', DateRangeFilter),
-                   'accepting'
+                   'accepting', ProjectLocationFilter
                    )
     list_display = ('title', 'project', 'status', 'created', 'deadline', 'expertise_based')
 

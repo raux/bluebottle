@@ -277,8 +277,29 @@ class ProjectAdmin(AdminImageMixin, ImprovedModelForm):
     raw_id_fields = ('owner', 'reviewer', 'task_manager', 'promoter', 'organization',)
     prepopulated_fields = {'slug': ('title',)}
 
-    inlines = (ProjectBudgetLineInline, RewardInlineAdmin, TaskAdminInline, ProjectDocumentInline,
-               ProjectPhaseLogInline)
+    sourcing_inlines = (TaskAdminInline, ProjectDocumentInline, ProjectPhaseLogInline)
+    funding_inlines = (ProjectBudgetLineInline, RewardInlineAdmin, TaskAdminInline,
+                       ProjectDocumentInline, ProjectPhaseLogInline)
+
+    def get_inline_instances(self, request, obj=None):
+        inline_instances = []
+        if not obj or obj.project_type in ['funding', 'both']:
+            inlines = self.funding_inlines
+        else:
+            inlines = self.sourcing_inlines
+
+        for inline_class in inlines:
+            inline = inline_class(self.model, self.admin_site)
+            if request:
+                if not (inline.has_add_permission(request) or
+                        inline.has_change_permission(request, obj) or
+                        inline.has_delete_permission(request, obj)):
+                    continue
+                if not inline.has_add_permission(request):
+                    inline.max_num = 0
+            inline_instances.append(inline)
+
+        return inline_instances
 
     list_filter = ('country__subregion__region', )
 
@@ -528,35 +549,30 @@ class ProjectAdmin(AdminImageMixin, ImprovedModelForm):
         return OrderedDict(reversed(actions.items()))
 
     def get_fieldsets(self, request, obj=None):
-        main = {'fields': ['owner', 'reviewer', 'task_manager', 'promoter', 'organization', 'status', 'title', 'slug',
-                           'project_type', 'is_campaign', 'celebrate_results']}
+        main = (_('Main'), {'fields': ['owner', 'reviewer', 'task_manager', 'promoter',
+                                       'organization', 'status', 'title', 'slug',
+                                       'project_type', 'is_campaign', 'celebrate_results']})
+
+        story = (_('Story'), {'fields': ('pitch', 'story', 'reach')})
+
+        details = (_('Details'), {'fields': ('language', 'theme', 'categories', 'image',
+                                             'video_url', 'country', 'latitude', 'longitude', 'location', 'place')})
+
+        goal = (_('Goal'), {'fields': ('amount_asked', 'amount_extra', 'amount_donated_i18n', 'amount_needed_i18n',
+                                       'currencies', 'popularity', 'vote_count')})
+
+        dates = (_('Dates'), {'fields': ('voting_deadline', 'deadline', 'date_submitted', 'campaign_started',
+                                         'campaign_ended', 'campaign_funded', 'campaign_paid_out')})
+
+        bank = (_('Bank details'), {'fields': ('account_holder_name', 'account_holder_address',
+                                               'account_holder_postal_code', 'account_holder_city',
+                                               'account_holder_country', 'account_number',
+                                               'account_details', 'account_bank_country')})
 
         if request.user.has_perm('projects.approve_payout'):
-            main['fields'].insert(3, 'payout_status')
+            main[0]['fields'].insert(3, 'payout_status')
 
-        return (
-            (_('Main'), main),
-
-            (_('Story'), {'fields': ('pitch', 'story', 'reach')}),
-
-            (_('Details'), {'fields': ('language', 'theme', 'categories', 'image', 'video_url', 'country', 'latitude',
-                                       'longitude', 'location', 'place')}),
-
-            (_('Goal'), {'fields': ('amount_asked', 'amount_extra', 'amount_donated_i18n', 'amount_needed_i18n',
-                                    'currencies', 'popularity', 'vote_count')}),
-
-            (_('Dates'), {'fields': ('voting_deadline', 'deadline', 'date_submitted', 'campaign_started',
-                                     'campaign_ended', 'campaign_funded', 'campaign_paid_out')}),
-
-            (_('Bank details'), {'fields': ('account_holder_name',
-                                            'account_holder_address',
-                                            'account_holder_postal_code',
-                                            'account_holder_city',
-                                            'account_holder_country',
-                                            'account_number',
-                                            'account_details',
-                                            'account_bank_country')})
-        )
+        return main, story, details, goal, dates, bank
 
     def get_queryset(self, request):
         # Optimization: Select related fields that are used in admin specific
