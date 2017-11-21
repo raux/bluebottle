@@ -816,6 +816,10 @@ def set_dates(sender, instance, **kwargs):
     if instance.status.slug == 'campaign' and not instance.campaign_started:
         instance.campaign_started = timezone.now()
 
+    # If transitioning to done-complete always update campaign_ended timestamp.
+    if instance._original_status != instance.status and instance.status.slug == 'done-complete':
+        instance.campaign_ended = timezone.now()
+
     if instance.status.slug in ["done-complete", "done-incomplete", "closed"] \
             and not instance.campaign_ended:
         instance.campaign_ended = timezone.now()

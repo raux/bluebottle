@@ -492,7 +492,8 @@ class ProjectAdmin(AdminImageMixin, ImprovedModelForm):
 
     def get_list_filter(self, request):
         filters = ['status', 'is_campaign', ProjectThemeFilter, ProjectSkillFilter,
-                   ProjectReviewerFilter, 'project_type', ('deadline', DateRangeFilter), ]
+                   ProjectReviewerFilter, 'project_type',
+                   ('deadline', DateRangeFilter), ('campaign_ended', DateRangeFilter), ]
 
         if request.user.has_perm('projects.approve_payout'):
             filters.insert(1, 'payout_status')
