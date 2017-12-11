@@ -485,3 +485,31 @@ class SitePlatformSettings(BasePlatformSettings):
     class Meta:
         verbose_name_plural = _('site platform settings')
         verbose_name = _('site platform settings')
+
+
+class StylePlatformSettings(BasePlatformSettings):
+    logo = ImageField(
+        _("logo"), max_length=255, blank=True, null=True,
+        upload_to='logo/'
+    )
+
+    primary_color = models.CharField(max_length=100, null=True, blank=True)
+    primary_color_shadow = models.CharField(max_length=100, null=True, blank=True)
+    secondary_color = models.CharField(max_length=100, null=True, blank=True)
+    secondary_color_shadow = models.CharField(max_length=100, null=True, blank=True)
+
+    gray_color = models.CharField(max_length=100, null=True, blank=True)
+    white_color = models.CharField(max_length=100, null=True, blank=True)
+
+    header_background_color = models.CharField(max_length=100, null=True, blank=True)
+    modal_background_color = models.CharField(max_length=100, null=True, blank=True)
+
+    header_logo_link_padding = models.CharField(max_length=100, null=True, blank=True)
+    header_logo_link_padding_scroll = models.CharField(max_length=100, null=True, blank=True)
+
+    font_family = models.CharField(max_length=100, null=True, blank=True)
+
+    h1_font_weight = models.CharField(max_length=100, null=True, blank=True)
+    h2_font_weight = models.CharField(max_length=100, null=True, blank=True)
+    h3_font_weight = models.CharField(max_length=100, null=True, blank=True)
+    h4_font_weight = models.CharField(max_length=100, null=True, blank=True)

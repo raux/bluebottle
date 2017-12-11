@@ -19,7 +19,7 @@ from bluebottle.cms.models import (
     ProjectImagesContent, ProjectsContent, ShareResultsContent, ProjectsMapContent,
     SupporterTotalContent, TasksContent, CategoriesContent, StepsContent, LocationsContent,
     SlidesContent, Step, Logo, LogosContent, ContentLink, LinksContent,
-    SitePlatformSettings, WelcomeContent
+    SitePlatformSettings, StylePlatformSettings, WelcomeContent
 )
 from bluebottle.geo.serializers import LocationSerializer
 from bluebottle.projects.serializers import ProjectPreviewSerializer
@@ -457,4 +457,33 @@ class SitePlatformSettingsSerializer(serializers.ModelSerializer):
             'powered_by_link',
             'powered_by_logo',
             'powered_by_text'
+        )
+
+
+class StylePlatformSettingsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = StylePlatformSettings
+        fields = (
+            'logo',
+            'primary_color',
+            'primary_color_shadow',
+            'secondary_color',
+            'secondary_color_shadow',
+
+            'gray_color',
+            'white_color',
+
+            'header_background_color',
+            'modal_background_color',
+
+            'header_logo_link_padding',
+            'header_logo_link_padding_scroll',
+
+            'font_family',
+
+            'h1_font_weight',
+            'h2_font_weight',
+            'h3_font_weight',
+            'h4_font_weight',
         )

@@ -104,6 +104,7 @@ FLUENT_DASHBOARD_APP_GROUPS = (
     (_('Settings'), {
         'models': (
             'bluebottle.cms.models.SitePlatformSettings',
+            'bluebottle.cms.models.StylePlatformSettings',
             'bluebottle.projects.models.ProjectPlatformSettings',
             'bluebottle.analytics.models.AnalyticsPlatformSettings',
         ),

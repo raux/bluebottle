@@ -228,7 +228,8 @@ def get_public_properties(request):
             'platform': {
                 'content': get_platform_settings('cms.SitePlatformSettings'),
                 'projects': get_platform_settings('projects.ProjectPlatformSettings'),
-                'analytics': get_platform_settings('analytics.AnalyticsPlatformSettings')
+                'analytics': get_platform_settings('analytics.AnalyticsPlatformSettings'),
+                'styling': get_platform_settings('cms.StylePlatformSettings')
             }
         }
         try:

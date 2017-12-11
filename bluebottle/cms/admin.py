@@ -14,7 +14,7 @@ from nested_inline.admin import NestedStackedInline
 from bluebottle.statistics.statistics import Statistics
 
 from bluebottle.cms.models import (
-    SiteLinks, Link, LinkGroup, LinkPermission, SitePlatformSettings,
+    SiteLinks, Link, LinkGroup, LinkPermission, SitePlatformSettings, StylePlatformSettings,
     Stat, Quote, Slide, Step, Logo, ContentLink, ResultPage, HomePage,
     Greeting
 )
@@ -148,9 +148,14 @@ class SitePlatformSettingsAdmin(SingletonAdmin):
     pass
 
 
+class StylePlatformSettingsAdmin(SingletonAdmin):
+    pass
+
+
 admin.site.register(ResultPage, ResultPageAdmin)
 admin.site.register(HomePage, HomePageAdmin)
 admin.site.register(SiteLinks, SiteLinksAdmin)
 admin.site.register(LinkGroup, LinkGroupAdmin)
 admin.site.register(LinkPermission, LinkPermissionAdmin)
 admin.site.register(SitePlatformSettings, SitePlatformSettingsAdmin)
+admin.site.register(StylePlatformSettings, StylePlatformSettingsAdmin)
