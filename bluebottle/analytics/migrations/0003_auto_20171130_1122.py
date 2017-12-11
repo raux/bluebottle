@@ -4,18 +4,14 @@ from __future__ import unicode_literals
 
 import os
 
-from django.db import migrations
 from django.conf import settings
-from django.core.management import call_command
+from django.db import migrations
 
-from bluebottle.utils.utils import update_group_permissions
+from bluebottle.analytics.utils import create_report_views
 
 
-def create_report_views(apps, schema_editor):
-    report_sql_path = os.path.join(settings.PROJECT_ROOT, 'bluebottle', 'analytics',
-                                   'views', 'report.sql')
-    call_command('create_report_views', file=report_sql_path)
-
+def create_views(apps, schema_editor):
+    create_report_views()
 
 class Migration(migrations.Migration):
 
@@ -28,5 +24,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_report_views)
+        migrations.RunPython(create_views)
     ]

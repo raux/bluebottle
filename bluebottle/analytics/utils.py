@@ -1,18 +1,70 @@
 import re
+import os
 import logging
 
 from django.conf import settings
 from django.db import connection
 from django.utils import timezone
 from django.utils.translation import ugettext as _
+from django.core.management import call_command
+from django.db import connection
+
 from tenant_extras.utils import TenantLanguage
 
 from bluebottle.clients import properties
+from bluebottle.clients.models import Client
 from bluebottle.clients.utils import LocalTenant
 from .tasks import queue_analytics_record
 
 
 logger = logging.getLogger(__name__)
+
+
+def drop_report_views(client_name=None):
+    if client_name:
+        clients = [Client.objects.get(client_name=client_name)]
+    else:
+        clients = Client.objects.all()
+
+    for client in clients:
+        connection.set_tenant(client)
+        with LocalTenant(client, clear_tenant=True):
+            cursor = connection.cursor()
+
+            # NOTE: Drop with cascade on v_projects view should drop all
+            #       views related to reporting.
+            cursor.execute('DROP VIEW IF EXISTS v_projects CASCADE;')
+
+
+def create_report_views(sql_file_path=None, client_name=None):
+    if not sql_file_path:
+        sql_file_path = os.path.join(settings.PROJECT_ROOT, 'bluebottle', 'analytics',
+                                     'views', 'report.sql')
+        logger.info('Using default views file for reporting: {}'.format(sql_file_path))
+    import pudb;pudb.set_trace() 
+    with open(sql_file_path, 'r') as file:
+        report_sql = file.read()
+
+    # Remove comments and blank lines
+    sql_lines = filter(lambda x: not re.match(r'^(---.*|\s*)$', x), report_sql.splitlines())
+
+    # Basic sanity check
+    if not (re.match(r'^\s*DROP VIEW.*', sql_lines[0]) and
+            re.match(r'^\s*CREATE OR REPLACE VIEW.*', sql_lines[1])):
+        raise Exception('Is this a valid query to create a database view?')
+
+    if client_name:
+        clients = [Client.objects.get(client_name=client_name)]
+    else:
+        clients = Client.objects.all()
+
+    sql = "\n".join(sql_lines)
+
+    for client in clients:
+        connection.set_tenant(client)
+        with LocalTenant(client, clear_tenant=True):
+            cursor = connection.cursor()
+            cursor.execute(sql)
 
 
 def _multi_getattr(obj, attr, **kw):
@@ -136,3 +188,18 @@ def process(instance, created):
         queue_analytics_record.delay(timestamp=timestamp, tags=tags, fields=fields)
     else:
         queue_analytics_record(timestamp=timestamp, tags=tags, fields=fields)
+
+
+class NoReportingViews(object):
+    def __init__(self, client_name=None):
+        if not client_name:
+            client = Client.objects.get(schema_name=connection.schema_name)
+            self.client_name = client.client_name
+        else:
+            self.client_name = client_name
+
+    def __enter__(self):
+        drop_report_views(client_name=self.client_name)
+
+    def __exit__(self, type, value, traceback):
+        create_report_views(client_name=self.client_name)
