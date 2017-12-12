@@ -16,7 +16,7 @@ from bluebottle.statistics.statistics import Statistics
 from bluebottle.cms.models import (
     SiteLinks, Link, LinkGroup, LinkPermission, SitePlatformSettings, StylePlatformSettings,
     Stat, Quote, Slide, Step, Logo, ContentLink, ResultPage, HomePage,
-    Greeting
+    Greeting, StyleRule
 )
 
 
@@ -148,8 +148,13 @@ class SitePlatformSettingsAdmin(SingletonAdmin):
     pass
 
 
+class StyleRuleInline(admin.StackedInline):
+    model = StyleRule
+    extra = 0
+
+
 class StylePlatformSettingsAdmin(SingletonAdmin):
-    pass
+    inlines = [StyleRuleInline]
 
 
 admin.site.register(ResultPage, ResultPageAdmin)

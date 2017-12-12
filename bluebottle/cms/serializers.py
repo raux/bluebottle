@@ -461,29 +461,13 @@ class SitePlatformSettingsSerializer(serializers.ModelSerializer):
 
 
 class StylePlatformSettingsSerializer(serializers.ModelSerializer):
+    rules = serializers.SerializerMethodField()
+
+    def get_rules(self, obj):
+        return dict(
+            (rule.key, rule.value) for rule in obj.rules.all()
+        )
 
     class Meta:
         model = StylePlatformSettings
-        fields = (
-            'logo',
-            'primary_color',
-            'primary_color_shadow',
-            'secondary_color',
-            'secondary_color_shadow',
-
-            'gray_color',
-            'white_color',
-
-            'header_background_color',
-            'modal_background_color',
-
-            'header_logo_link_padding',
-            'header_logo_link_padding_scroll',
-
-            'font_family',
-
-            'h1_font_weight',
-            'h2_font_weight',
-            'h3_font_weight',
-            'h4_font_weight',
-        )
+        fields = ('logo', 'rules')
