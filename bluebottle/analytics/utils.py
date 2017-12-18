@@ -3,11 +3,9 @@ import os
 import logging
 
 from django.conf import settings
-from django.db import connection
+from django.db import connection, migrations
 from django.utils import timezone
 from django.utils.translation import ugettext as _
-from django.core.management import call_command
-from django.db import connection
 
 from tenant_extras.utils import TenantLanguage
 
@@ -28,7 +26,7 @@ def drop_report_views(client_name=None):
 
     for client in clients:
         connection.set_tenant(client)
-        with LocalTenant(client, clear_tenant=True):
+        with LocalTenant(client):
             cursor = connection.cursor()
 
             # NOTE: Drop with cascade on v_projects view should drop all
@@ -41,7 +39,6 @@ def create_report_views(sql_file_path=None, client_name=None):
         sql_file_path = os.path.join(settings.PROJECT_ROOT, 'bluebottle', 'analytics',
                                      'views', 'report.sql')
         logger.info('Using default views file for reporting: {}'.format(sql_file_path))
-    import pudb;pudb.set_trace() 
     with open(sql_file_path, 'r') as file:
         report_sql = file.read()
 
@@ -62,7 +59,7 @@ def create_report_views(sql_file_path=None, client_name=None):
 
     for client in clients:
         connection.set_tenant(client)
-        with LocalTenant(client, clear_tenant=True):
+        with LocalTenant(client):
             cursor = connection.cursor()
             cursor.execute(sql)
 
@@ -190,16 +187,20 @@ def process(instance, created):
         queue_analytics_record(timestamp=timestamp, tags=tags, fields=fields)
 
 
+def remove_views_func(apps, schema_editor):
+    client = Client.objects.get(schema_name=connection.schema_name)
+    drop_report_views(client_name=client.client_name)
+
+
+def add_views_func(apps, schema_editor):
+    client = Client.objects.get(schema_name=connection.schema_name)
+    create_report_views(client_name=client.client_name)
+
+
 class NoReportingViews(object):
-    def __init__(self, client_name=None):
-        if not client_name:
-            client = Client.objects.get(schema_name=connection.schema_name)
-            self.client_name = client.client_name
-        else:
-            self.client_name = client_name
-
-    def __enter__(self):
-        drop_report_views(client_name=self.client_name)
-
-    def __exit__(self, type, value, traceback):
-        create_report_views(client_name=self.client_name)
+    def operations(self, func, *args, **kwargs):
+        return [
+            migrations.RunPython(remove_views_func),
+            func(*args, **kwargs),
+            migrations.RunPython(add_views_func)
+        ]

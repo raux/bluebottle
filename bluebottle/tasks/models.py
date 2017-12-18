@@ -74,8 +74,9 @@ class Task(models.Model, PreviousStatusMixin):
     objects = UpdateSignalsQuerySet.as_manager()
 
     # required resources
-    time_needed = models.FloatField(_('time_needed'),
-                                    help_text=_('Estimated number of hours needed to perform this task.'))
+    time_needed = models.PositiveSmallIntegerField(_('time_needed'),
+                                                   help_text=_("Estimated number of hours needed to perform "
+                                                               "this task."))
 
     skill = models.ForeignKey('tasks.Skill', verbose_name=_('Skill needed'), null=True)
 
@@ -314,9 +315,9 @@ class TaskMember(models.Model, PreviousStatusMixin):
                               default=TaskMemberStatuses.applied)
     motivation = models.TextField(_('Motivation'), help_text=_('Motivation by applicant.'), blank=True)
     comment = models.TextField(_('Comment'), help_text=_('Comment by task owner.'), blank=True)
-    time_spent = models.FloatField(_('time spent'),
-                                     default=0,
-                                     help_text=_('Time spent executing this task.'))
+    time_spent = models.PositiveSmallIntegerField(_('time spent'),
+                                                  default=0,
+                                                  help_text=_('Time spent executing this task.'))
 
     externals = models.PositiveSmallIntegerField(_('Externals'),
                                                  default=0,

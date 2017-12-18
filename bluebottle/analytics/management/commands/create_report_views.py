@@ -1,8 +1,5 @@
-import re
-
 from django.core.management.base import BaseCommand
 
-from bluebottle.clients.utils import LocalTenant
 from bluebottle.analytics.utils import create_report_views
 
 
