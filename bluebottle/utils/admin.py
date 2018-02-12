@@ -1,13 +1,13 @@
+import csv
+
+from django.utils.timezone import now
 from moneyed import Money
+import StringIO
+import xlsxwriter
 
 from django.contrib import admin
 from django.contrib.admin.views.main import ChangeList
 from django.db.models.aggregates import Sum
-
-from bluebottle.members.models import Member, CustomMemberFieldSettings, CustomMemberField
-from bluebottle.projects.models import CustomProjectFieldSettings, Project, CustomProjectField
-from .models import Language
-import csv
 from django.db.models.fields.files import FieldFile
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
@@ -15,7 +15,11 @@ from django.utils.translation import ugettext as _
 
 from bluebottle.clients import properties
 from bluebottle.bb_projects.models import ProjectPhase
+from bluebottle.members.models import Member, CustomMemberFieldSettings, CustomMemberField
+from bluebottle.projects.models import CustomProjectFieldSettings, Project, CustomProjectField
 from bluebottle.utils.exchange_rates import convert
+
+from .models import Language
 
 
 class LanguageAdmin(admin.ModelAdmin):
@@ -65,7 +69,9 @@ mark_as_plan_new.short_description = _("Mark selected projects as status Plan Ne
 
 def export_as_csv_action(description="Export as CSV", fields=None, exclude=None, header=True,
                          manyToManySep=';'):
-    """ This function returns an export csv action. """
+    """
+    This function returns an export csv action.
+    """
 
     def export_as_csv(modeladmin, request, queryset):
         """ Generic csv export admin action.
@@ -127,6 +133,93 @@ def export_as_csv_action(description="Export as CSV", fields=None, exclude=None,
     export_as_csv.short_description = description
     export_as_csv.acts_on_all = True
     return export_as_csv
+
+
+def export_as_xlsx_action(description="Export as XLSX", fields=None, exclude=None, header=True):
+    """
+    This function returns an export xlsx action.
+    """
+
+    def export_as_xlsx(modeladmin, request, queryset):
+        opts = modeladmin.model._meta
+        field_names = [field.name for field in opts.fields]
+        labels = []
+
+        if exclude:
+            field_names = [f for f in field_names if f not in exclude]
+
+        elif fields:
+            try:
+                field_names = [field for field, _ in fields]
+                labels = [label for _, label in fields]
+            except ValueError:
+                field_names = [field for field in fields]
+                labels = field_names
+
+        output = StringIO.StringIO()
+        workbook = xlsxwriter.Workbook(output, {
+            'in_memory': True,
+            'default_date_format': 'dd/mm/yy',
+            'remove_timezone': True
+        })
+        ws = workbook.add_worksheet('Export')
+
+        col = 0
+        row = 0
+        if header:
+            if not labels:
+                labels = field_names
+            # For project check if we have extra fields
+            if queryset.model is Project:
+                for field in CustomProjectFieldSettings.objects.all():
+                    labels.append(field.name)
+            if queryset.model is Member:
+                for field in CustomMemberFieldSettings.objects.all():
+                    labels.append(field.name)
+            for label in labels:
+                ws.write(row, col, label)
+                col += 1
+            row += 1
+
+        for obj in queryset:
+            col = 0
+            data = [prep_field(request, obj, field) for field in field_names]
+
+            # Write extra field data
+            if queryset.model is Project:
+                for field in CustomProjectFieldSettings.objects.all():
+                    try:
+                        value = obj.extra.get(field=field).value
+                    except CustomProjectField.DoesNotExist:
+                        value = ''
+                    data.append(value)
+            if queryset.model is Member:
+                for field in CustomMemberFieldSettings.objects.all():
+                    try:
+                        value = obj.extra.get(field=field).value
+                    except CustomMemberField.DoesNotExist:
+                        value = ''
+                    data.append(value.encode('utf-8'))
+            for val in data:
+                ws.write(row, col, val)
+                col += 1
+            row += 1
+
+        workbook.close()
+
+        output.seek(0)
+
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = "Export-{}-{}.xlsx".format(queryset.model, now())
+        response['Content-Disposition'] = "attachment; filename={}".format(filename)
+        return response
+
+    export_as_xlsx.short_description = description
+    export_as_xlsx.acts_on_all = True
+    return export_as_xlsx
 
 
 class TotalAmountAdminChangeList(ChangeList):

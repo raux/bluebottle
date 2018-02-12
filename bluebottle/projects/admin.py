@@ -44,7 +44,7 @@ from bluebottle.tasks.admin import TaskAdminInline
 from bluebottle.common.admin_utils import ImprovedModelForm
 from bluebottle.geo.admin import LocationFilter, LocationGroupFilter
 from bluebottle.geo.models import Location
-from bluebottle.utils.admin import export_as_csv_action, prep_field
+from bluebottle.utils.admin import export_as_csv_action, prep_field, export_as_xlsx_action
 from bluebottle.votes.models import Vote
 
 from .forms import ProjectDocumentForm
@@ -392,6 +392,7 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
     ]
 
     actions = [export_as_csv_action(fields=export_fields),
+               export_as_xlsx_action(fields=export_fields),
                mark_as_closed, mark_as_done_incomplete,
                mark_as_done_complete, mark_as_campaign,
                mark_as_voting_done, mark_as_voting,
