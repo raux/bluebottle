@@ -107,7 +107,7 @@ class InterswitchPaymentAdapter(BasePaymentAdapter):
         url = "{0}?productid={1}&transactionreference={2}&amount={3}".format(
             status_url, self.payment.product_id, self.payment.txn_ref, self.payment.amount
         )
-        response = requests.get(url, headers={"Hash": self._get_status_hash()}).content
+        response = requests.get(url, headers={"Hash": self._get_status_hash()}, verify=False).content
         self.payment.response = response
 
         InterswitchPaymentStatusUpdate.objects.create(payment=self.payment, result=response)
