@@ -7,8 +7,7 @@ from django.template.context import RequestContext
 from rest_framework_jwt.views import obtain_jwt_token, refresh_jwt_token
 
 
-from bluebottle.auth.views import GetAuthToken
-
+from bluebottle.auth.views import GetAuthToken, LockdownView
 
 urlpatterns = [
     url(r'^api/config',
@@ -145,6 +144,8 @@ urlpatterns += [
                     namespace='social')),
     url(r'^api/social-login/(?P<backend>[^/]+)/$',
         GetAuthToken.as_view()),
+    url(r'^api/auth/lock-down/$',
+        LockdownView.as_view()),
 
     # Needed for the self-documenting API in Django Rest Framework.
     url(r'^api-auth/', include('rest_framework.urls',
