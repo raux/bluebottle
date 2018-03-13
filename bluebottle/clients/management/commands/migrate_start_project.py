@@ -35,15 +35,16 @@ class Command(BaseCommand):
                 Page.objects.filter(slug='start-project').delete()
                 try:
                     for language, content in properties.START_PROJECT.items():
-                        page = Page(
+                        page, _created = Page.objects.update_or_create(
                             title=content['title'],
                             slug='start-project',
-                            full_page=True,
-                            language=language,
-                            publication_date=now(),
-                            status='published',
+                            defaults={
+                                'full_page': True,
+                                'language': language,
+                                'publication_date': now(),
+                                'status': 'published',
+                            }
                         )
-                        page.save()
 
                         page_type = ContentType.objects.get_for_model(page)
 
