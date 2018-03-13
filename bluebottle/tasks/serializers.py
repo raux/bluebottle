@@ -22,28 +22,21 @@ class UniqueTaskMemberValidator(object):
         self.request = serializer.context['request']
 
     def __call__(self, data):
-        if 'task' not in data:
-            return
-
-        queryset = TaskMember.objects.filter(
-            member=self.request.user,
-            task=data['task']
-        ).exclude(
-            status__in=(
-                TaskMember.TaskMemberStatuses.rejected,
-                TaskMember.TaskMemberStatuses.withdrew
-            )
-        )
-
-        if self.instance is not None:
-            queryset = queryset.exclude(
-                pk=self.instance.pk
+        if self.instance is None:
+            queryset = TaskMember.objects.filter(
+                member=self.request.user,
+                task=data['task']
+            ).exclude(
+                status__in=(
+                    TaskMember.TaskMemberStatuses.rejected,
+                    TaskMember.TaskMemberStatuses.withdrew
+                )
             )
 
-        if queryset.exists():
-            raise ValidationError(
-                _('It is not possible to apply twice for the same task')
-            )
+            if queryset.exists():
+                raise ValidationError(
+                    _('It is not possible to apply twice for the same task')
+                )
 
 
 class BaseTaskMemberSerializer(serializers.ModelSerializer):
@@ -124,7 +117,7 @@ class TaskPermissionsSerializer(serializers.Serializer):
 
 
 class BaseTaskSerializer(serializers.ModelSerializer):
-    members = BaseTaskMemberSerializer(many=True, read_only=True, source='members_applied')
+    members = BaseTaskMemberSerializer(many=True, read_only=True)
     files = TaskFileSerializer(many=True, read_only=True)
     project = serializers.SlugRelatedField(slug_field='slug',
                                            queryset=Project.objects)
