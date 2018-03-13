@@ -209,6 +209,8 @@ LOCKDOWN_IGNORE = ('/api/auth/lock-down/', '/admin', '/docs',
                    '/media', '/downloads',
                    '/surveys', '/token')
 
+FORCE_LOCKDOWN = False
+
 SOCIAL_AUTH_STRATEGY = 'social.strategies.django_strategy.DjangoStrategy'
 SOCIAL_AUTH_STORAGE = 'social.apps.django_app.default.models.DjangoStorage'
 
