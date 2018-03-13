@@ -8,6 +8,7 @@ import re
 from babel.numbers import get_currency_symbol, get_currency_name
 from django.db import connection, ProgrammingError
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import get_language
 
 from djmoney_rates.utils import get_rate
@@ -34,7 +35,9 @@ class LocalTenant(object):
 
     def __enter__(self):
         if self.tenant:
+            connection.set_tenant(self.tenant)
             properties.set_tenant(self.tenant)
+            ContentType.objects.clear_cache()
 
     def __exit__(self, type, value, traceback):
         if self.clear_tenant:
@@ -163,11 +166,10 @@ def get_user_site_links(user):
 
 
 def get_platform_settings(name):
-
     app_name, model_name = name.split('.')
     model_app_name = 'bluebottle.{}.models'.format(app_name)
     settings_class = getattr(importlib.import_module(model_app_name), model_name)
-    settings_object = settings_class.objects.get()
+    settings_object = settings_class.load()
     serializer_app_name = 'bluebottle.{}.serializers'.format(app_name)
     serializer_class = getattr(importlib.import_module(serializer_app_name), "{}Serializer".format(model_name))
     return serializer_class(settings_object).to_representation(settings_object)
@@ -226,9 +228,12 @@ def get_public_properties(request):
             'languageCode': get_language(),
             'siteLinks': get_user_site_links(request.user),
             'platform': {
+                'common': get_platform_settings('common.CommonPlatformSettings'),
                 'content': get_platform_settings('cms.SitePlatformSettings'),
                 'projects': get_platform_settings('projects.ProjectPlatformSettings'),
-                'analytics': get_platform_settings('analytics.AnalyticsPlatformSettings')
+                'donations': get_platform_settings('donations.DonationPlatformSettings'),
+                'analytics': get_platform_settings('analytics.AnalyticsPlatformSettings'),
+                'members': get_platform_settings('members.MemberPlatformSettings')
             }
         }
         try:

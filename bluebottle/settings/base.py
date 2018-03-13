@@ -202,9 +202,17 @@ LOCALE_REDIRECT_IGNORE = ('/docs', '/go', '/api', '/payments_docdata',
                           '/payments_lipisha', '/media', '/downloads',
                           '/surveys', '/token')
 
+LOCKDOWN_IGNORE = ('/api/auth/lock-down/', '/admin', '/docs',
+                   '/payments_docdata', '/payments_lipisha',
+                   '/payments_mock', '/payments_interswitch',
+                   '/payments_vitepay', '/payments_flutterwave',
+                   '/media', '/downloads',
+                   '/surveys', '/token')
+
+FORCE_LOCKDOWN = False
+
 SOCIAL_AUTH_STRATEGY = 'social.strategies.django_strategy.DjangoStrategy'
 SOCIAL_AUTH_STORAGE = 'social.apps.django_app.default.models.DjangoStorage'
-
 
 PASSWORD_HASHERS = (
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
@@ -309,7 +317,6 @@ TENANT_APPS = (
 
     'rest_framework.authtoken',
 
-    # Newly moved BB apps
     'bluebottle.members',
     'bluebottle.projects',
     'bluebottle.organizations',
@@ -320,8 +327,6 @@ TENANT_APPS = (
     'bluebottle.payouts',
     'bluebottle.payouts_dorado',
     'bluebottle.surveys',
-
-    # Plain Bluebottle apps
     'bluebottle.wallposts',
     'bluebottle.utils',
     'bluebottle.analytics',
@@ -330,6 +335,7 @@ TENANT_APPS = (
     'bluebottle.contact',
     'bluebottle.geo',
     'bluebottle.pages',
+    'bluebottle.mails',
     'bluebottle.news',
     'bluebottle.slides',
     'bluebottle.quotes',
@@ -808,7 +814,6 @@ DJANGO_MONEY_RATES = {
 }
 AUTO_CONVERT_MONEY = False
 
-LOCKDOWN_URL_EXCEPTIONS = [r'^/payments_vitepay/status_update/']
 THUMBNAIL_ENGINE = 'sorl_watermarker.engines.pil_engine.Engine'
 THUMBNAIL_WATERMARK_ALWAYS = False
 
