@@ -107,9 +107,8 @@ class Command(BaseCommand):
 
         if client and client_name:
             self.create_client_superuser(client_name)
-
-        if client and client_name:
             self.load_fixtures(client_name=client_name)
+            self.lockdown(client_name=client_name)
 
         if client and post_command:
             call_command(post_command, *args, **options)
