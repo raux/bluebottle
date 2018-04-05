@@ -335,6 +335,7 @@ TENANT_APPS = (
     'bluebottle.quotes',
     'bluebottle.payments',
     'bluebottle.payments_docdata',
+    'bluebottle.payments_dusupay',
     'bluebottle.payments_external',
     'bluebottle.payments_flutterwave',
     'bluebottle.payments_interswitch',
