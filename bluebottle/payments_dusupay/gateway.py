@@ -11,7 +11,7 @@ class DusuPayClient(object):
     """
     sandbox_domain = 'http://sandbox.dusupay.com/'
     live_domain = 'https://dusupay.com/'
-    direct_collections_api = '/merchant-api/collections/mobile/requestPayment.json'
+    direct_collections_api = '/merchant-api/collections/v2/mobile/requestPayment.json'
     transaction_status_api = '/transactions/check_status/{merchant_id}/{transaction_reference}.json'
 
     status_mapping = {
@@ -41,23 +41,24 @@ class DusuPayClient(object):
         url = self.domain + self.direct_collections_api
 
         payload = {
-            "dusupay_amount": amount,
-            "dusupay_currency": currency,
-            "dusupay_merchantId": self.merchant_id,
-            "dusupay_transactionReference": reference,
-            "dusupay_customerPhone": mobile,
-            "dusupay_transactionTimestamp": timestamp,
-            "dusupay_successURL": success_url,
-            "dusupay_itemId": item_id,
-            "dusupay_itemName": item_name,
-            "dusupay_customerName": customer_name,
-            "dusupay_customerEmail": customer_email,
+            "merchant_id": self.merchant_id,
+            "amount": amount,
+            "currency": currency,
+            "merchant_reference": reference,
+            "timestamp": timestamp,
+            "account_number": mobile,
+            "account_name": customer_name,
+            "item_id": item_id,
+            "item_name": item_name,
+            "account_email": customer_email
         }
         signature = self._generate_signature(payload)
         payload['signature'] = signature
+        payload['simulatePayBill'] = "true"
 
         print json.dumps(payload)
         response = requests.post(url, json=payload)
+        print response
 
         data = response.json()
         return data
