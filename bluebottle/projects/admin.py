@@ -18,7 +18,9 @@ from bluebottle.payments.adapters import has_payment_prodiver
 from bluebottle.payments_lipisha.models import LipishaProject
 from bluebottle.projects.models import (
     ProjectPlatformSettings, ProjectSearchFilter, ProjectAddOn, ProjectLocation,
-    CustomProjectField, CustomProjectFieldSettings, ProjectCreateTemplate)
+    CustomProjectField, CustomProjectFieldSettings, ProjectCreateTemplate,
+    ProjectBankAccount
+)
 
 from django import forms
 from django.db import connection
@@ -241,6 +243,16 @@ class ProjectAdminForm(six.with_metaclass(CustomAdminFormMetaClass, forms.ModelF
                     value = CustomProjectField.objects.filter(project=self.instance, field=field).get().value
                     self.initial[field.slug] = value
 
+    def clean(self):
+        if (
+            self.cleaned_data['status'].slug == 'campaign' and
+            self.cleaned_data['amount_asked'].amount > 0 and
+            not self.cleaned_data['bank_details_reviewed']
+        ):
+            raise forms.ValidationError(
+                _('The bank details need to be reviewed before approving a project')
+            )
+
     def save(self, commit=True):
         project = super(ProjectAdminForm, self).save(commit=commit)
         for field in CustomProjectFieldSettings.objects.all():
@@ -296,6 +308,20 @@ class ProjectLocationInline(LatLongMapPickerMixin, admin.StackedInline):
         return False
 
 
+class ProjectBankAccountInline(admin.StackedInline):
+    model = ProjectBankAccount
+    fields = (
+        'name', 'address', 'city', 'postal_code', 'country', 'number',
+        'details', 'bank_country'
+    )
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModelForm):
     form = ProjectAdminForm
     date_hierarchy = 'created'
@@ -329,6 +355,7 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
         return instances
 
     all_inlines = (
+        ProjectBankAccountInline,
         ProjectLocationInline,
         ProjectBudgetLineInline,
         RewardInlineAdmin,
@@ -385,7 +412,6 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
             actions[action_name] = (
                 mark_as, action_name, _('Mark selected as "{}"'.format(_(phase.name)))
             )
-        print actions
         return OrderedDict(reversed(actions.items()))
 
     # Fields
@@ -439,7 +465,7 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
         project_url = reverse('admin:projects_project_change', args=(project.id,))
 
         # Check IBAN & BIC
-        account = project.account_number
+        account = project.bank_account.number
         if len(account) < 3:
             self.message_user(request, 'Invalid Bank Account: {}'.format(account), level='ERROR')
             return HttpResponseRedirect(project_url)
@@ -451,14 +477,14 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
             except ValueError as e:
                 self.message_user(request, 'Invalid IBAN: {}'.format(e), level='ERROR')
                 return HttpResponseRedirect(project_url)
-            project.account_number = iban.compact
+            project.bank_account.number = iban.compact
             try:
-                bic = BIC(project.account_details)
+                bic = BIC(project.bank_account.details)
             except ValueError as e:
                 self.message_user(request, 'Invalid BIC: {}'.format(e), level='ERROR')
                 return HttpResponseRedirect(project_url)
-            project.account_details = bic.compact
-            project.save()
+            project.bank_account.details = bic.compact
+            project.bank_account.save()
 
         if not request.user.has_perm('projects.approve_payout'):
             self.message_user(request, 'Missing permission: projects.approve_payout', level='ERROR')
@@ -671,17 +697,6 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
             'campaign_paid_out', 'voting_deadline'
         ]})
 
-        bank = (_('Bank details'), {'fields': [
-            'account_holder_name',
-            'account_holder_address',
-            'account_holder_postal_code',
-            'account_holder_city',
-            'account_holder_country',
-            'account_number',
-            'account_details',
-            'account_bank_country'
-        ]})
-
         extra = (_('Extra fields'), {
             'fields': [field.slug for field in CustomProjectFieldSettings.objects.all()]
         })
@@ -689,7 +704,7 @@ class ProjectAdmin(AdminImageMixin, PolymorphicInlineSupportMixin, ImprovedModel
         fieldsets = (main, story, dates)
 
         if obj and obj.project_type != 'sourcing':
-            fieldsets += (amount, bank)
+            fieldsets += (amount, )
 
         if CustomProjectFieldSettings.objects.count():
             fieldsets += (extra, )

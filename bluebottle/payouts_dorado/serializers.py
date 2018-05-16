@@ -36,12 +36,12 @@ class ProjectPayoutSerializer(serializers.ModelSerializer):
     amount_donated = MoneyTotalSerializer(source='totals_donated', read_only=True)
 
     title = serializers.CharField(required=False)
-    receiver_account_name = serializers.CharField(source='account_holder_name', read_only=True)
-    receiver_account_number = serializers.CharField(source='account_number', read_only=True)
-    receiver_account_details = serializers.CharField(source='account_details', read_only=True)
-    receiver_account_city = serializers.CharField(source='account_holder_city', read_only=True)
-    receiver_account_address = serializers.CharField(source='account_holder_address', read_only=True)
-    receiver_account_country = serializers.CharField(source='account_holder_country.name', read_only=True)
+    receiver_account_name = serializers.CharField(source='bank_account.name', read_only=True)
+    receiver_account_number = serializers.CharField(source='bank_account.number', read_only=True)
+    receiver_account_details = serializers.CharField(source='bank_account.details', read_only=True)
+    receiver_account_city = serializers.CharField(source='bank_account.city', read_only=True)
+    receiver_account_address = serializers.CharField(source='bank_account.address', read_only=True)
+    receiver_account_country = serializers.CharField(source='bank_account.country.name', read_only=True)
 
     donations = PayoutDonationSerializer(many=True, read_only=True)
     status = serializers.CharField(source='payout_status')

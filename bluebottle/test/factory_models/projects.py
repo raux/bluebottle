@@ -6,7 +6,9 @@ from django.utils import timezone
 import factory
 
 from bluebottle.bb_projects.models import ProjectTheme, ProjectPhase
-from bluebottle.projects.models import Project, ProjectDocument, ProjectLocation
+from bluebottle.projects.models import (
+    Project, ProjectDocument, ProjectLocation, ProjectBankAccount
+)
 
 from .accounts import BlueBottleUserFactory
 from .geo import CountryFactory
@@ -39,6 +41,21 @@ class ProjectLocationFactory(factory.DjangoModelFactory):
 
     latitude = 43.068620
     longitude = 23.676374
+
+
+class ProjectBankAccountFactory(factory.DjangoModelFactory):
+    class Meta(object):
+        model = ProjectBankAccount
+
+    details = 'ABNANL2AABNANL2AABNANL2A'
+    number = 'NL18ABNA0484869868'
+    bank_country = factory.SubFactory(CountryFactory)
+
+    name = 'test name'
+    address = 'test'
+    postal_code = '1234ab'
+    city = 'test'
+    country = factory.SubFactory(CountryFactory)
 
 
 class ProjectFactory(factory.DjangoModelFactory):

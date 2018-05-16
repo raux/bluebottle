@@ -30,7 +30,9 @@ from bluebottle.test.factory_models.geo import CountryFactory, LocationFactory
 from bluebottle.test.factory_models.orders import OrderFactory
 from bluebottle.test.factory_models.rewards import RewardFactory
 from bluebottle.test.factory_models.organizations import OrganizationFactory
-from bluebottle.test.factory_models.projects import ProjectFactory, ProjectDocumentFactory
+from bluebottle.test.factory_models.projects import (
+    ProjectFactory, ProjectBankAccountFactory, ProjectDocumentFactory
+)
 from bluebottle.test.factory_models.tasks import (
     TaskFactory, TaskMemberFactory, SkillFactory
 )
@@ -572,17 +574,20 @@ class ProjectApiIntegrationTest(ProjectEndpointTestCase):
 
         country = CountryFactory.create()
 
-        project = ProjectFactory.create(title='test project',
-                                        owner=self.user,
-                                        account_holder_name='test name',
-                                        account_holder_address='test address',
-                                        account_holder_postal_code='12345AC',
-                                        account_holder_city='Amsterdam',
-                                        account_holder_country=country,
-                                        account_number='NL18ABNA0484869868',
-                                        account_bank_country=country
-                                        )
-        project.save()
+        project = ProjectFactory.create(
+            title='test project',
+            owner=self.user,
+        )
+        project.bank_account.name = 'test name'
+        project.bank_account.address = 'test address'
+        project.bank_account.postal_code = '12345AC'
+
+        project.bank_account.city = 'Amsterdam'
+        project.bank_account.country = country
+        project.bank_account.number = 'NL18ABNA0484869868'
+        project.bank_account.details = 'ABNA2NLA'
+        project.bank_account.bank_country = country
+        project.bank_account.save()
 
         response = self.client.get(self.manage_projects_url + str(project.slug),
                                    token=self.user_token)
@@ -590,8 +595,8 @@ class ProjectApiIntegrationTest(ProjectEndpointTestCase):
         self.assertEquals(response.status_code, status.HTTP_200_OK, response)
         self.assertEquals(response.data['title'], 'test project')
         self.assertEquals(response.data['account_number'], 'NL18ABNA0484869868')
-        self.assertEquals(response.data['account_details'], 'ABNANL2AABNANL2AABNANL2A')
-        self.assertEquals(response.data['account_bic'], 'ABNANL2AABNANL2AABNANL2A')
+        self.assertEquals(response.data['account_details'], 'ABNA2NLA')
+        self.assertEquals(response.data['account_bic'], 'ABNA2NLA')
         self.assertEquals(response.data['account_bank_country'], country.id)
 
         self.assertEquals(response.data['account_holder_name'], 'test name')

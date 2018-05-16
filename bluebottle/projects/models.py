@@ -6,6 +6,7 @@ from adminsortable.models import SortableMixin
 
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericRelation
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.aggregates import Count, Sum
@@ -64,6 +65,40 @@ class ProjectLocation(models.Model):
     class Meta:
         verbose_name = _('Map')
         verbose_name_plural = _('Map')
+
+
+class ProjectBankAccount(models.Model):
+    project = models.OneToOneField('projects.Project', primary_key=True, related_name='bank_account')
+    name = models.CharField(
+        _("account holder name"), max_length=255, null=True, blank=True
+    )
+    address = models.CharField(
+        _("account holder address"), max_length=255, null=True, blank=True
+    )
+    postal_code = models.CharField(
+        _("account holder postal code"), max_length=20, null=True, blank=True
+    )
+    city = models.CharField(
+        _("account holder city"), max_length=255, null=True, blank=True
+    )
+    country = models.ForeignKey(
+        'geo.Country', blank=True, null=True, related_name='account_details_country'
+    )
+    number = models.CharField(
+        _("Account number"),
+        max_length=255,
+        null=True,
+        blank=True
+    )
+    details = models.CharField(_("account details"), max_length=500, null=True, blank=True)
+    bank_country = models.ForeignKey(
+        'geo.Country', blank=True, null=True,
+        related_name="account_details_bank_country"
+    )
+
+    class Meta:
+        verbose_name = _('Bank Account')
+        verbose_name_plural = _('Bank Account')
 
 
 class ProjectPhaseLog(models.Model):
@@ -200,6 +235,12 @@ class Project(BaseProject, PreviousStatusMixin):
     wallposts = GenericRelation(Wallpost, related_query_name='project_wallposts')
     objects = UpdateSignalsQuerySet.as_manager()
 
+    bank_details_reviewed = models.BooleanField(
+        _('Bank details reviewed'),
+        help_text=_('A staff memmber has reviewed the bank details for this project'),
+        default=False
+    )
+
     def __unicode__(self):
         if self.title:
             return u'{}'.format(self.title)
@@ -314,6 +355,7 @@ class Project(BaseProject, PreviousStatusMixin):
         if not self.deadline:
             self.deadline = timezone.now() + datetime.timedelta(days=30)
 
+
         # make sure the deadline is set to the end of the day, amsterdam time
         tz = pytz.timezone('Europe/Amsterdam')
         local_time = self.deadline.astimezone(tz)
@@ -357,10 +399,24 @@ class Project(BaseProject, PreviousStatusMixin):
         if not self.task_manager:
             self.task_manager = self.owner
 
+        if self.bank_details_reviewed:
+            for document in self.documents.all():
+                document.delete()
+
         # Set all task.author to project.task_manager
         self.task_set.exclude(author=self.task_manager).update(author=self.task_manager)
 
         super(Project, self).save(*args, **kwargs)
+
+        try:
+            self.bank_account
+        except ProjectBankAccount.DoesNotExist:
+            ProjectBankAccount.objects.create(project=self)
+
+        try:
+            self.projectlocation
+        except ProjectLocation.DoesNotExist:
+            ProjectLocation.objects.create(project=self)
 
     def update_status_after_donation(self, save=True):
         if not self.campaign_funded and not self.campaign_ended and \

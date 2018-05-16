@@ -19,7 +19,8 @@ from bluebottle.organizations.serializers import OrganizationPreviewSerializer
 from bluebottle.projects.models import (
     ProjectBudgetLine, ProjectDocument, Project, ProjectImage,
     ProjectPlatformSettings, ProjectSearchFilter, ProjectLocation,
-    ProjectAddOn, ProjectCreateTemplate)
+    ProjectAddOn, ProjectCreateTemplate, ProjectBankAccount,
+)
 from bluebottle.tasks.models import Task, TaskMember, Skill
 from bluebottle.utils.serializers import (
     MoneySerializer, ResourcePermissionField,
@@ -66,6 +67,15 @@ class ProjectLocationSerializer(serializers.ModelSerializer):
         model = ProjectLocation
         fields = (
             'street', 'country', 'city', 'neighborhood', 'latitude', 'longitude'
+        )
+
+
+class ProjectBankAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectBankAccount
+        fields = (
+            'name', 'address', 'postal_code', 'city', 'country', 'number',
+            'details', 'bank_country'
         )
 
 
@@ -235,7 +245,6 @@ class ProjectPreviewSerializer(ProjectSerializer):
     image = ImageSerializer(required=False)
     owner = UserProfileSerializer()
     skills = serializers.SerializerMethodField()
-    project_location = ProjectLocationSerializer(read_only=True, source='projectlocation')
     theme = ProjectThemeSerializer()
     project_location = ProjectLocationSerializer(read_only=True, source='projectlocation')
 
@@ -311,8 +320,61 @@ class ManageTaskSerializer(serializers.ModelSerializer):
 class ManageProjectSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source='slug', read_only=True)
 
-    account_bic = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    account_details = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    account_holder_name = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.name'
+    )
+    account_holder_address = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.address'
+    )
+    account_holder_postal_code = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.postal_code'
+    )
+    account_holder_city = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.city'
+    )
+    account_holder_country = serializers.PrimaryKeyRelatedField(
+        required=False,
+        allow_null=True,
+        queryset=Country.objects,
+        source='bank_account.country'
+    )
+    account_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.number'
+    )
+    account_bic = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.details'
+    )
+    account_details = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        source='bank_account.details'
+    )
+    account_bank_country = serializers.PrimaryKeyRelatedField(
+        required=False,
+        allow_null=True,
+        queryset=Country.objects,
+        source='bank_account.bank_country'
+    )
+
     amount_asked = MoneySerializer(required=False, allow_null=True)
     amount_donated = MoneySerializer(read_only=True)
     amount_needed = MoneySerializer(read_only=True)
@@ -343,6 +405,7 @@ class ManageProjectSerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(source='projectlocation.latitude', required=False, allow_null=True)
     longitude = serializers.FloatField(source='projectlocation.longitude', required=False, allow_null=True)
     project_location = ProjectLocationSerializer(read_only=True, source='projectlocation')
+    bank_account = ProjectBankAccountSerializer(required=False)
 
     editable_fields = ('pitch', 'story', 'image', 'video_url', 'projectlocation')
 
@@ -447,19 +510,44 @@ class ManageProjectSerializer(serializers.ModelSerializer):
 
             instance.projectlocation.save()
 
+        if 'bank_account' in validated_data:
+            bank_account = validated_data.pop('bank_account')
+
+            if not hasattr(instance, 'bank_account'):
+                instance.bank_account = ProjectBankAccount.objects.create(
+                    project=instance
+                )
+
+            for field, value in bank_account.items():
+                setattr(instance.bank_account, field, value)
+
+            instance.bank_account.save()
+
         return super(ManageProjectSerializer, self).update(instance, validated_data)
 
     def create(self, validated_data):
         location_data = None
+        bank_account_data = None
+
         if 'projectlocation' in validated_data:
             location_data = validated_data.pop('projectlocation')
+        if 'bank_account' in validated_data:
+            bank_account_data = validated_data.pop('bank_account')
 
         instance = super(ManageProjectSerializer, self).create(validated_data)
         if location_data:
+            instance.projectlocation.delete()
             ProjectLocation.objects.create(
                 project=instance,
                 **location_data
             )
+        if bank_account_data:
+            instance.bank_account.delete()
+            ProjectBankAccount.objects.create(
+                project=instance,
+                **bank_account_data
+            )
+
         return instance
 
     class Meta:
@@ -513,7 +601,8 @@ class ManageProjectSerializer(serializers.ModelSerializer):
                   'video_url',
                   'permissions',
                   'related_permissions',
-                  'viewable',)
+                  'viewable',
+                  'bank_account')
 
 
 class ProjectDonationSerializer(serializers.ModelSerializer):
