@@ -270,7 +270,7 @@ class DonationInline(admin.TabularInline):
         )
 
 
-class CustomProjectFieldSettingsInline(admin.TabularInline):
+class DonationDefaultAmountsInline(admin.TabularInline):
     model = DonationDefaultAmounts
     extra = 0
 
@@ -278,7 +278,7 @@ class CustomProjectFieldSettingsInline(admin.TabularInline):
 class DonationPlatformSettingsAdmin(SingletonAdmin):
 
     inlines = [
-        CustomProjectFieldSettingsInline,
+        DonationDefaultAmountsInline,
     ]
 
 
