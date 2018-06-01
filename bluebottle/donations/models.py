@@ -91,7 +91,6 @@ class DonationDefaultAmounts(models.Model):
 class DonationPlatformSettings(BasePlatformSettings):
 
     show_donation_amount = models.BooleanField(default=True)
-    recurring_donations = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = _('donation platform settings')
