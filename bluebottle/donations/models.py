@@ -1,11 +1,10 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.utils.functional import lazy
 
 from django_extensions.db.fields import (ModificationDateTimeField,
                                          CreationDateTimeField)
 
-from bluebottle.utils.fields import MoneyField, get_currency_choices, get_default_currency
+from bluebottle.utils.fields import MoneyField, CurrencyField
 from bluebottle.utils.models import BasePlatformSettings
 from bluebottle.utils.utils import StatusDefinition
 
@@ -77,11 +76,7 @@ class Donation(models.Model):
 
 class DonationDefaultAmounts(models.Model):
     settings = models.ForeignKey('donations.DonationPlatformSettings', related_name='default_amounts')
-    currency = models.CharField(
-        default=lazy(get_default_currency, str)(),
-        choices=lazy(get_currency_choices, tuple)(),
-        max_length=3
-    )
+    currency = CurrencyField()
     value1 = models.DecimalField(default=10.0, decimal_places=2, max_digits=12)
     value2 = models.DecimalField(default=10.0, decimal_places=2, max_digits=12)
     value3 = models.DecimalField(default=10.0, decimal_places=2, max_digits=12)
