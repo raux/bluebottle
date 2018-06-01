@@ -30,7 +30,6 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('update', models.DateTimeField(auto_now=True)),
                 ('show_donation_amount', models.BooleanField(default=True)),
-                ('recurring_donations', models.BooleanField(default=False)),
             ],
             options={
                 'verbose_name': 'donation platform settings',

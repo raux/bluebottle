@@ -182,6 +182,5 @@ class DonationPlatformSettingsSerializer(serializers.ModelSerializer):
         model = DonationPlatformSettings
         fields = (
             'show_donation_amount',
-            'recurring_donations',
             'default_amounts'
         )

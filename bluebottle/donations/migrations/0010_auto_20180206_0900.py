@@ -15,7 +15,6 @@ def migrate_donation_settings(apps, schema_editor):
     DonationPlatformSettings = apps.get_model("donations", "DonationPlatformSettings")
     settings, created = DonationPlatformSettings.objects.get_or_create()
     settings.show_donation_amount = properties.SHOW_DONATION_AMOUNTS
-    settings.recurring_donations = properties.RECURRING_DONATIONS_ENABLED
     amounts = properties.DONATION_AMOUNTS
     for currency in amounts:
         values = amounts[currency]
