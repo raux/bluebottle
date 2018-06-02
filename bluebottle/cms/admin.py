@@ -5,7 +5,6 @@ from django.forms import Textarea
 from django.shortcuts import redirect
 from django.utils.html import format_html
 from django.utils.translation import ugettext_lazy as _
-from django_singleton_admin.admin import SingletonAdmin
 from fluent_contents.admin.placeholderfield import PlaceholderFieldAdmin
 from parler.admin import TranslatableAdmin
 from adminsortable.admin import SortableStackedInline, NonSortableParentAdmin, SortableTabularInline
@@ -15,9 +14,11 @@ from bluebottle.statistics.statistics import Statistics
 
 from bluebottle.cms.models import (
     SiteLinks, Link, LinkGroup, LinkPermission, SitePlatformSettings,
-    Stat, Quote, Slide, Step, Logo, ResultPage, HomePage,
+    Stat, Quote, Slide, Step, Logo, ResultPage, HomePage, ContentLink,
     Greeting
 )
+from bluebottle.utils.admin import BasePlatformSettingsAdmin
+from bluebottle.utils.widgets import SecureAdminURLFieldWidget
 
 
 class LinkPermissionAdmin(admin.ModelAdmin):
@@ -36,7 +37,6 @@ class LinkInline(SortableStackedInline):
         'link_permissions',
         ('component', 'component_id'),
         'external_link',
-
     )
 
 
@@ -103,10 +103,18 @@ class SlideInline(NestedStackedInline, SortableStackedInline):
 class StepInline(NestedStackedInline, SortableStackedInline):
     model = Step
     extra = 0
+    formfield_overrides = {
+        models.URLField: {'widget': SecureAdminURLFieldWidget()},
+    }
 
 
 class LogoInline(NestedStackedInline, SortableStackedInline):
     model = Logo
+    extra = 0
+
+
+class ContentLinkInline(NestedStackedInline, SortableStackedInline):
+    model = ContentLink
     extra = 0
 
 
@@ -131,7 +139,7 @@ class ResultPageAdmin(PlaceholderFieldAdmin, TranslatableAdmin, NonSortableParen
     fields = 'title', 'slug', 'description', 'start_date', 'end_date', 'image', 'content'
 
 
-class HomePageAdmin(SingletonAdmin, PlaceholderFieldAdmin, TranslatableAdmin, NonSortableParentAdmin):
+class HomePageAdmin(BasePlatformSettingsAdmin, PlaceholderFieldAdmin, TranslatableAdmin, NonSortableParentAdmin):
     formfield_overrides = {
         models.TextField: {'widget': Textarea(attrs={'rows': 4, 'cols': 40})},
     }
@@ -139,7 +147,7 @@ class HomePageAdmin(SingletonAdmin, PlaceholderFieldAdmin, TranslatableAdmin, No
     fields = ('content', )
 
 
-class SitePlatformSettingsAdmin(SingletonAdmin):
+class SitePlatformSettingsAdmin(BasePlatformSettingsAdmin):
     pass
 
 

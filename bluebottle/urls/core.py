@@ -24,10 +24,14 @@ urlpatterns = [
         include('bluebottle.categories.urls.api')),
     url(r'^api/bb_tasks/',
         include('bluebottle.bb_tasks.urls.api')),
-    url(r'^api/geo/', include('bluebottle.geo.urls.api')),
+    url(r'^downloads/',
+        include('bluebottle.bb_tasks.urls.media')),
+    url(r'^api/geo/',
+        include('bluebottle.geo.urls.api')),
     url(r'^api/contact/',
         include('bluebottle.contact.urls.api')),
-    url(r'^api/news/', include('bluebottle.news.urls.api')),
+    url(r'^api/news/',
+        include('bluebottle.news.urls.api')),
     url(r'^api/pages/',
         include('bluebottle.pages.urls.api')),
     url(r'^api/quotes/',
@@ -47,8 +51,8 @@ urlpatterns = [
         include('bluebottle.bb_orders.urls.api')),
     url(r'^api/donations/',
         include('bluebottle.donations.urls.api')),
-    url(r'^api/order_payments/', include(
-        'bluebottle.payments.urls.order_payments_api')),
+    url(r'^api/order_payments/',
+        include('bluebottle.payments.urls.order_payments_api')),
     url(r'^api/payments/',
         include('bluebottle.payments.urls.api')),
     url(r'^api/monthly_donations/',
@@ -78,6 +82,8 @@ urlpatterns = [
         include('bluebottle.payments_flutterwave.urls.core')),
     url(r'^payments_lipisha/',
         include('bluebottle.payments_lipisha.urls.core')),
+    url(r'^payments_beyonic/',
+        include('bluebottle.payments_beyonic.urls.core')),
 
     url(r'^surveys/',
         include('bluebottle.surveys.urls.core')),
@@ -89,7 +95,6 @@ urlpatterns = [
         include('bluebottle.votes.urls.api')),
     url(r'^api/surveys/',
         include('bluebottle.surveys.urls.api')),
-
 
     # Organization urls for private documents
     url(r'^documents/',
@@ -118,7 +123,7 @@ urlpatterns = [
         include('bluebottle.payouts_dorado.urls')),
 
     url(r'^downloads/', include('bluebottle.projects.urls.media')),
-    url(r'^downloads/', include('bluebottle.bb_tasks.urls.media')),
+
 ]
 
 

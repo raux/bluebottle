@@ -36,7 +36,6 @@ class LocalTenant(object):
     def __enter__(self):
         if self.tenant:
             connection.set_tenant(self.tenant)
-            properties.set_tenant(self.tenant)
             ContentType.objects.clear_cache()
 
     def __exit__(self, type, value, traceback):
@@ -47,7 +46,7 @@ class LocalTenant(object):
             except AttributeError:
                 logger.info("Attempted to clear missing tenant properties.")
         elif self.previous_tenant:
-            properties.set_tenant(self.previous_tenant)
+            connection.set_tenant(self.tenant)
 
 
 def tenant_url():
@@ -73,7 +72,7 @@ def get_min_amounts(methods):
     result = defaultdict(list)
     for method in methods:
         for currency, data in method['currencies'].items():
-            result[currency].append(data.get('min_amount', float("inf")))
+            result[currency].append(data.get('min_amount', 0))
 
     return dict((currency, min(amounts)) for currency, amounts in result.items())
 
