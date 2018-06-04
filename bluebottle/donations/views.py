@@ -7,7 +7,6 @@ from rest_framework import permissions, generics
 
 from bluebottle.bluebottle_drf2.pagination import BluebottlePagination
 from bluebottle.bb_orders.permissions import OrderIsNew, IsOrderCreator
-from bluebottle.clients import properties
 from bluebottle.donations.serializers import (
     LatestDonationSerializer, PreviewDonationSerializer,
     PreviewDonationWithoutAmountSerializer,
@@ -15,7 +14,7 @@ from bluebottle.donations.serializers import (
 )
 from bluebottle.fundraisers.models import Fundraiser
 from bluebottle.projects.models import Project
-from bluebottle.donations.models import Donation
+from bluebottle.donations.models import Donation, DonationPlatformSettings
 from bluebottle.utils.utils import StatusDefinition
 
 logger = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ class DonationList(ValidDonationsMixin, generics.ListAPIView):
     pagination_class = DonationPagination
 
     def get_serializer_class(self):
-        if getattr(properties, 'SHOW_DONATION_AMOUNTS', True):
+        if DonationPlatformSettings.load().show_donation_amount:
             return PreviewDonationSerializer
         return PreviewDonationWithoutAmountSerializer
 
@@ -57,7 +56,7 @@ class DonationDetail(ValidDonationsMixin, generics.RetrieveAPIView):
     queryset = Donation.objects.all()
 
     def get_serializer_class(self):
-        if getattr(properties, 'SHOW_DONATION_AMOUNTS', True):
+        if DonationPlatformSettings.load().show_donation_amount:
             return PreviewDonationSerializer
         return PreviewDonationWithoutAmountSerializer
 
@@ -67,7 +66,7 @@ class ProjectDonationList(ValidDonationsMixin, generics.ListAPIView):
     pagination_class = DonationPagination
 
     def get_serializer_class(self):
-        if getattr(properties, 'SHOW_DONATION_AMOUNTS', True):
+        if DonationPlatformSettings.load().show_donation_amount:
             return PreviewDonationSerializer
         return PreviewDonationWithoutAmountSerializer
 
@@ -114,7 +113,7 @@ class ProjectDonationDetail(ValidDonationsMixin, generics.RetrieveAPIView):
     queryset = Donation.objects.all()
 
     def get_serializer_class(self):
-        if getattr(properties, 'SHOW_DONATION_AMOUNTS', True):
+        if DonationPlatformSettings.load().show_donation_amount:
             return PreviewDonationSerializer
         return PreviewDonationWithoutAmountSerializer
 

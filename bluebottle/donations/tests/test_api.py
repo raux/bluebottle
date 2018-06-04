@@ -9,8 +9,7 @@ from rest_framework import status
 from moneyed import Money
 
 from bluebottle.bb_orders.views import ManageOrderDetail
-from bluebottle.clients import properties
-from bluebottle.donations.models import Donation
+from bluebottle.donations.models import Donation, DonationPlatformSettings
 from bluebottle.orders.models import Order
 from bluebottle.test.factory_models.accounts import BlueBottleUserFactory
 from bluebottle.test.factory_models.donations import DonationFactory
@@ -640,7 +639,10 @@ class TestProjectDonationList(DonationApiTestCase):
         self.assertEqual(donation['project'], self.project3.id)
 
     def test_successful_project_donation_list(self, check_status_psp):
-        setattr(properties, 'SHOW_DONATION_AMOUNTS', True)
+        donation_settings = DonationPlatformSettings.load()
+        donation_settings.show_donation_amount = True
+        donation_settings.save()
+
         # Unsuccessful donations should not be shown
         order = OrderFactory.create(user=self.user2)
         reward = RewardFactory.create(project=self.project3)
@@ -657,7 +659,9 @@ class TestProjectDonationList(DonationApiTestCase):
         self.assertIn('reward', response.data['results'][0])
 
     def test_project_donation_list_without_amounts(self, check_status_psp):
-        setattr(properties, 'SHOW_DONATION_AMOUNTS', False)
+        donation_settings = DonationPlatformSettings.load()
+        donation_settings.show_donation_amount = False
+        donation_settings.save()
         reward = RewardFactory.create(project=self.project3)
         order = OrderFactory.create(user=self.user2)
         DonationFactory.create(amount=2000, project=self.project3, reward=reward,
