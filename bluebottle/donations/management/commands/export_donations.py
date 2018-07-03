@@ -22,7 +22,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         results = []
         clients = Client.objects.all()
-        if 'tenant' in options:
+        if options['tenant']:
             clients = clients.filter(client_name=options['tenant'])
 
         for client in clients:
