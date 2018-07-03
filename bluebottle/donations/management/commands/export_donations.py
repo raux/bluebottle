@@ -17,10 +17,15 @@ class Command(BaseCommand):
         parser.add_argument('--start', type=str, default=None, action='store')
         parser.add_argument('--end', type=str, default=None, action='store')
         parser.add_argument('--file', type=str, default=None, action='store')
+        parser.add_argument('--tenant', type=str, default=None, action='store')
 
     def handle(self, *args, **options):
         results = []
-        for client in Client.objects.all():
+        clients = Client.objects.all()
+        if 'tenant' in options:
+            clients = clients.filter(client_name=options['tenant'])
+
+        for client in clients:
             connection.set_tenant(client)
             with LocalTenant(client, clear_tenant=True):
                 ContentType.objects.clear_cache()
@@ -35,10 +40,15 @@ class Command(BaseCommand):
                     orders = orders.filter(created__lte=options['end'])
 
                 for order in orders:
-                    try:
-                        transaction_reference = order.order_payment.payment.transaction_reference
-                    except Exception:
-                        transaction_reference = ''
+                    transaction_reference = ''
+                    for order_payment in order.order_payments.all():
+                        try:
+                            transaction_reference = order_payment.payment.transaction_reference
+                        except Exception:
+                            pass
+
+                        if transaction_reference:
+                            break
 
                     results.append({
                         'id': order.id,
