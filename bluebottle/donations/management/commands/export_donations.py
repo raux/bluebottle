@@ -41,7 +41,8 @@ class Command(BaseCommand):
 
                 for order in orders:
                     transaction_reference = ''
-                    for order_payment in order.order_payments.all():
+                    statuses = ['settled', 'authorized', 'refudned', 'charged_back']
+                    for order_payment in order.order_payments.filter(status__in=statuses).all():
                         try:
                             transaction_reference = order_payment.payment.transaction_reference
                         except Exception:
