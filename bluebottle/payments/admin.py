@@ -166,6 +166,14 @@ class PaymentAdmin(PolymorphicParentModelAdmin):
     base_model = Payment
     list_display = ('created', 'status', 'order_payment_amount', 'polymorphic_ctype')
     list_filter = ('status', )
+    search_fields = (
+        # 'docdatapayment__transaction_reference',
+        'flutterwavepayment__transaction_reference',
+        # 'lipishapayment__transaction_reference',
+        # 'telesompayment__transaction_reference',
+        # 'vitepaypayment__transaction_reference',
+        # 'beyonicpayment__transaction_reference',
+    )
 
     inlines = (PaymentLogEntryInline,)
     ordering = ('-created',)
