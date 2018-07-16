@@ -324,7 +324,7 @@ class TaskMemberAdmin(admin.ModelAdmin):
 
     raw_id_fields = ('member', 'task')
     list_filter = ('status',)
-    list_display = ('member_email', 'task', 'status', 'updated')
+    list_display = ('member_email', 'task', 'time_spent', 'status', 'updated')
 
     readonly_fields = ('updated', 'resume_link')
 
