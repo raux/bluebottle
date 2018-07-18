@@ -19,8 +19,11 @@ from bluebottle.wallposts.models import Wallpost
 
 
 def get_field(obj, field):
-    if field == 'rendered_content':
-        return render_placeholder(RequestFactory().get('/test'), obj.body)
+    if field.startswith('rendered_') == 'rendered_content':
+        return render_placeholder(
+            RequestFactory().get('/test'),
+            getattr(obj, field.split('_')[-1])
+        )
 
     bits = field.split('__')
     for bit in bits:
@@ -33,12 +36,8 @@ def get_field(obj, field):
 
 
 def get_data(qs, fields):
-    data = []
-
-    for obj in qs:
-        data.append([get_field(obj, field) for field in fields])
-
-    return data
+    for obj in qs.iterator():
+        yield [get_field(obj, field) for field in fields]
 
 
 def create_csv(qs, fields, filename):
@@ -46,7 +45,8 @@ def create_csv(qs, fields, filename):
     with open(filename, 'wb') as f:
         writer = csv.writer(f)
         writer.writerow(fields)
-        writer.writerows(data)
+        for row in data:
+            writer.writerow(row)
 
 
 def run(schema_name):
@@ -59,7 +59,11 @@ def run(schema_name):
             'id', 'title', 'owner__email', 'pitch', 'theme', 'deadline', 'description',
             'country', 'amount_asked', 'story', 'campaign_started', 'campaign_ended', 'place',
         )
-        create_csv(Project.objects.all(), fields, 'projects.csv')
+        create_csv(
+            Project.objects.select_related('owner'),
+            fields,
+            'projects.csv'
+        )
 
         fields = ('email', 'date_joined', 'first_name', 'last_name', 'place', 'about_me', 'last_seen')
         create_csv(Member.objects.all(), fields, 'members.csv')
@@ -67,14 +71,18 @@ def run(schema_name):
         fields = ('amount', 'project', 'create', 'order__status', 'amount')
         create_csv(Donation.objects.all(), fields, 'donations.csv')
 
-        fields = ('created', 'project', 'voter__email', 'ip_address')
-        create_csv(Vote.objects.all(), fields, 'votes.csv')
+        fields = ('title', 'publication_date', 'status', 'rendered_contents')
+        create_csv(NewsItem.objects.all(), fields, 'news.csv')
 
         fields = ('author__email', 'created', 'text', 'content_type', 'content_obj')
         create_csv(Wallpost.objects.all(), fields, 'wallposts.csv')
 
-        fields = ('title', 'publication_date', 'status', 'rendered_content')
+        fields = ('title', 'publication_date', 'status', 'rendered_body')
         create_csv(Page.objects.all(), fields, 'pages.csv')
 
-        fields = ('title', 'publication_date', 'status', 'rendered_content')
-        create_csv(NewsItem.objects.all(), fields, 'pages.csv')
+        fields = ('created', 'project', 'voter__email', 'ip_address')
+        create_csv(
+            Vote.objects.select_related('voter', 'project'),
+            fields,
+            'votes.csv'
+        )
